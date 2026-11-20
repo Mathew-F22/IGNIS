@@ -1,0 +1,88 @@
+// Biblioteca de ferramentas da etapa + assistente (árvore de decisão e matriz de seleção).
+import { useMemo, useState } from 'react';
+import { Check, Compass, Plus, Search, Sparkles } from 'lucide-react';
+import { Modal, toast } from './ui.jsx';
+import { useProject } from '../lib/project.jsx';
+import { STAGE, DECISION_TREE, SELECTION_MATRIX, slug } from '../../shared/psf.js';
+import { CATALOG, stageTools } from '../../shared/tools.js';
+import { initData } from '../../shared/kinds.js';
+
+export function useAddTool() {
+  const ctx = useProject();
+  return (sid, toolId) => {
+    const def = CATALOG[toolId];
+    const list = ctx.doc.stages?.[sid]?.tools || [];
+    if (list.some((t) => t.tool === toolId)) { toast('Esta ferramenta já está na etapa.'); return null; }
+    const item = ctx.push(['stages', sid, 'tools'], { tool: toolId, data: initData(def) });
+    toast(`${def.name} adicionada à etapa ${STAGE[sid].n}.`);
+    return item;
+  };
+}
+
+function ToolRow({ def, chosen, rec, onAdd, stageLabel, disabled }) {
+  return (
+    <div className={`lib-row ${chosen ? 'chosen' : ''}`}>
+      <div className="grow">
+        <div className="row" style={{ gap: 6 }}><b>{def.name}</b>{def.interactive && <span className="tag blue">interativa</span>}{rec && <span className="tag ember">recomendada</span>}</div>
+        <span className="small muted">{def.desc}{stageLabel ? ` · ${stageLabel}` : ''}</span>
+      </div>
+      {chosen ? <span className="tag green"><Check size={12} />escolhida</span> : <button type="button" className="btn sm secondary" disabled={disabled} onClick={onAdd}><Plus size={14} />{disabled ? 'Fase bloqueada' : 'Adicionar'}</button>}
+    </div>
+  );
+}
+
+export default function Library({ sid, onClose, onAdded, status, initialTab = 'etapa' }) {
+  const ctx = useProject();
+  const add = useAddTool();
+  const [q, setQ] = useState('');
+  const [tab, setTab] = useState(initialTab);
+  const [need, setNeed] = useState(null);
+  const st = STAGE[sid];
+  const chosenIn = (s) => new Set((ctx.doc.stages?.[s]?.tools || []).map((t) => t.tool));
+  const chosen = chosenIn(sid);
+  const recIds = new Set(st.rec.map(slug));
+  const list = useMemo(() => {
+    const all = stageTools(sid);
+    const f = all.filter((d) => !q || d.name.toLowerCase().includes(q.toLowerCase()) || (d.desc || '').toLowerCase().includes(q.toLowerCase()));
+    return [...f.filter((d) => recIds.has(d.id)), ...f.filter((d) => !recIds.has(d.id) && d.interactive), ...f.filter((d) => !recIds.has(d.id) && !d.interactive)];
+  }, [sid, q]);
+  const doAdd = (s, id) => { const it = add(s, id); if (it) onAdded?.(s, it); };
+  const locked = (s) => status.stages[s]?.locked;
+
+  const Suggest = ({ tools }) => tools.map(([name, s]) => {
+    const id = slug(name);
+    return <ToolRow key={name + s} def={CATALOG[id]} chosen={chosenIn(s).has(id)} disabled={locked(s)} onAdd={() => doAdd(s, id)} stageLabel={`Etapa ${STAGE[s].n} · ${STAGE[s].short}`} />;
+  });
+
+  return (
+    <Modal wide title={tab === 'etapa' ? `Ferramentas da etapa ${st.n} · ${st.short}` : 'Assistente: qual ferramenta usar?'} onClose={onClose} footer={<button className="btn" onClick={onClose}>Concluir</button>}>
+      <div className="stack">
+        <div className="segmented">
+          <button type="button" className={tab === 'etapa' ? 'on' : ''} onClick={() => setTab('etapa')}><Sparkles size={14} />Biblioteca da etapa</button>
+          <button type="button" className={tab === 'arvore' ? 'on' : ''} onClick={() => setTab('arvore')}><Compass size={14} />Qual é a necessidade?</button>
+          <button type="button" className={tab === 'matriz' ? 'on' : ''} onClick={() => setTab('matriz')}>Situação identificada</button>
+        </div>
+        {tab === 'etapa' && (
+          <>
+            <div className="search"><Search size={16} /><input className="input" autoFocus placeholder={`Buscar entre ${stageTools(sid).length} ferramentas`} value={q} onChange={(e) => setQ(e.target.value)} /></div>
+            <p className="small muted">Escolha pelo menos uma. Só as ferramentas preenchidas aparecem no A4 e nos slides.</p>
+            <div className="lib-list">{list.map((d) => <ToolRow key={d.id} def={d} chosen={chosen.has(d.id)} rec={recIds.has(d.id)} disabled={locked(sid)} onAdd={() => doAdd(sid, d.id)} />)}</div>
+          </>
+        )}
+        {tab === 'arvore' && (
+          <div className="stack">
+            <div className="tree-needs">{DECISION_TREE.map((n) => <button type="button" key={n.id} className={`need ${need === n.id ? 'on' : ''}`} onClick={() => setNeed(n.id)}><b>{n.id}</b>{n.need}</button>)}</div>
+            {need ? <div className="lib-list"><Suggest tools={DECISION_TREE.find((n) => n.id === need).tools} /></div> : <p className="small muted">Escolha a necessidade do projeto para ver as ferramentas indicadas e em que etapa cada uma entra.</p>}
+          </div>
+        )}
+        {tab === 'matriz' && (
+          <div className="stack">
+            {SELECTION_MATRIX.map((m) => (
+              <details key={m.s} className="lib-sit"><summary>{m.s}</summary><div className="lib-list"><Suggest tools={m.tools} /></div></details>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

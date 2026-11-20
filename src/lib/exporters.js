@@ -1,43 +1,44 @@
-import { ISHIKAWA_CATS, PROJECT_STATUS, STEPS } from '../../shared/catalog.js';
-import { stepStatus } from '../../shared/progress.js';
+import { PROJECT_STATUS } from '../../shared/catalog.js';
+import { STAGE, ORDER, GATE_STATUS } from '../../shared/psf.js';
+import { CATALOG } from '../../shared/tools.js';
+import { migrate } from '../../shared/template.js';
+import { projectStatus, toolFilled } from '../../shared/progress.js';
+import { KPI, kpiValue } from '../../shared/kpis.js';
 import { saveBlob } from './api.js';
 
-const join = (arr, f) => (arr || []).map(f).filter(Boolean).join(' | ');
+const val = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string').join(', ') : v ?? '');
 
-// Planilha com todos os projetos (login mestre).
+// Planilha com todos os projetos (login mestre): visão geral, fichas, ferramentas, Gates, KPIs e colaboradores.
 export async function exportProjectsXlsx(projects, users = []) {
   const XLSX = await import('xlsx');
-  const rows = projects.map((p) => {
-    const d = p.data || {};
-    const st = stepStatus(d);
-    const sol = (d.ideias?.lista || []).find((i) => i.id === d.ideias?.solucao);
+  const list = projects.map((p) => ({ ...p, data: migrate(p.data || {}) }));
+  const rows = list.map((p) => {
+    const d = p.data; const st = projectStatus(d); const F = (s) => d.stages?.[s]?.fields || {};
     return {
-      Projeto: p.title,
-      Status: PROJECT_STATUS[p.status] || p.status,
-      'Tipo de melhoria': p.tipoMelhoria || '',
-      Linha: p.linha || '',
-      Time: (p.members || []).map((m) => m.name).join(', '),
-      'Progresso (%)': st.total,
-      'Etapa atual': STEPS.find((s) => s.id === st.current)?.label || '',
-      Problema: d.problema?.descricao || '',
-      Indicador: d.problema?.meta?.indicador || '',
-      'Valor atual': d.problema?.meta?.atual || '',
-      Meta: d.problema?.meta?.alvo || '',
-      Unidade: d.problema?.meta?.unidade || '',
-      'Causa raiz': d.causa?.causaRaiz || '',
-      Solução: sol ? sol.titulo : '',
-      'Ações (plano)': join(d.prototipo?.acoes, (a) => `${a.oque} (${a.quem || '-'}, ${a.quando || '-'}, ${a.status || 'todo'})`),
-      'Medições': join(d.resultados?.medicoes, (m) => (m.valor !== '' ? `${m.label}: ${m.valor}` : '')),
-      'Ganho financeiro': d.resultados?.ganhoFinanceiro || '',
-      'Ganho qualitativo': d.resultados?.ganhoQualitativo || '',
-      Conclusão: d.conclusao?.resumo || '',
-      'Lições aprendidas': d.conclusao?.licoes || '',
+      Projeto: p.title, Status: PROJECT_STATUS[p.status] || p.status, 'Tipo de melhoria': p.tipoMelhoria || '', Linha: p.linha || '',
+      Time: (p.members || []).map((m) => m.name).join(', '), 'Maturidade (Gates)': `${st.maturity}/5 · ${st.maturityLabel}`, 'Progresso (%)': st.total,
+      'Etapa atual': `${STAGE[st.current].n}. ${STAGE[st.current].title}`,
+      Problema: F('s03').declaracao || '', 'Causa raiz': F('s06').causaRaiz || '', 'Indicador EMS': F('s07').kpiEms || '', Indicador: F('s07').indicador || '',
+      Baseline: F('s07').baseline || '', Meta: F('s07').meta || '', Unidade: F('s07').unidade || '', Solução: F('s09').solucao || '',
+      'Investimento (R$)': F('s17').investimento || '', Pedido: F('s17').pedido || '', 'Resultado obtido': F('s16').resultado || '',
+      'Ganho financeiro real (R$/ano)': F('s16').ganhoFinanceiro || '', Aprendizados: F('s16').licoes || '',
+      'Ferramentas preenchidas': ORDER.reduce((n, s) => n + st.stages[s].filled, 0),
       'Criado em': p.createdAt, 'Atualizado em': p.updatedAt,
     };
   });
-  const causes = projects.flatMap((p) => ISHIKAWA_CATS.flatMap((c) => (p.data?.causa?.ishikawa?.[c.id] || []).map((x) => ({
-    Projeto: p.title, Categoria: c.label, Causa: x.text, Provável: x.provavel ? 'Sim' : '',
+  const fichas = list.flatMap((p) => ORDER.flatMap((s) => STAGE[s].fields.filter((f) => f.t !== 'images' && val(p.data.stages?.[s]?.fields?.[f.k]) !== '').map((f) => ({
+    Projeto: p.title, Etapa: `${STAGE[s].n}. ${STAGE[s].title}`, Campo: f.l, Valor: val(p.data.stages[s].fields[f.k]),
   }))));
+  const tools = list.flatMap((p) => ORDER.flatMap((s) => (p.data.stages?.[s]?.tools || []).map((t) => ({
+    Projeto: p.title, Etapa: `${STAGE[s].n}. ${STAGE[s].short}`, Ferramenta: CATALOG[t.tool]?.name || t.tool, Tipo: CATALOG[t.tool]?.interactive ? 'Interativa' : 'Modelo', Preenchida: toolFilled(t) ? 'Sim' : 'Não',
+  }))));
+  const gates = list.flatMap((p) => projectStatus(p.data).phases.map((ph) => ({
+    Projeto: p.title, Gate: ph.gate.title, Situação: GATE_STATUS[ph.gateStatus]?.label || ph.gateStatus, Por: ph.gateData?.by || '', Em: ph.gateData?.at || '', Comentário: ph.gateData?.comment || '',
+  })));
+  const kpis = list.flatMap((p) => ORDER.flatMap((s) => (p.data.stages?.[s]?.tools || []).filter((t) => CATALOG[t.tool]?.kind === 'kpi').flatMap((t) => {
+    const k = KPI[t.data.kpi] || KPI.OUTRO;
+    return (t.data.periodos || []).map((r, i) => ({ Projeto: p.title, Etapa: STAGE[s].short, Indicador: k.id === 'OUTRO' ? t.data.nome || 'Indicador' : k.id, Período: r.label || `${i + 1}`, Valor: kpiValue(k, r) ?? '', Unidade: k.unit, Meta: t.data.meta || '' }));
+  })));
   const people = users.map((u) => ({
     Nome: u.name, Matrícula: u.matricula || '', 'E-mail': u.email || '', Cargo: u.cargo || '', Linha: u.linha || '', Turno: u.turno || '',
     Time: u.time || '', 'Tipo de melhoria': u.tipoMelhoria || '', 'Prévia do projeto': u.previa || '', Nota: u.idea?.score?.total ?? '',
@@ -49,8 +50,7 @@ export async function exportProjectsXlsx(projects, users = []) {
     ws['!cols'] = Object.keys(data[0] || {}).map((k) => ({ wch: Math.min(60, Math.max(12, k.length + 4)) }));
     XLSX.utils.book_append_sheet(wb, ws, name);
   };
-  add(rows, 'Projetos');
-  add(causes, 'Ishikawa');
+  add(rows, 'Projetos'); add(fichas, 'Fichas das etapas'); add(tools, 'Ferramentas'); add(gates, 'Stage Gates'); add(kpis, 'Indicadores EMS');
   if (people.length) add(people, 'Colaboradores');
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   saveBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `ignis-projetos-${new Date().toISOString().slice(0, 10)}.xlsx`);

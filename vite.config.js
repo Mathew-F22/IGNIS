@@ -6,10 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    watch: { ignored: ['**/data/**'] },
     proxy: {
       '/api': 'http://localhost:4000',
       '/socket.io': { target: 'http://localhost:4000', ws: true },
     },
   },
-  build: { chunkSizeWarningLimit: 2000 },
+  build: { chunkSizeWarningLimit: 3000 },
 });

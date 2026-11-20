@@ -8,9 +8,10 @@ import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { db, one, all, run, id, publicUser, JWT_SECRET } from './db.js';
 import { applyOp } from '../shared/ops.js';
-import { newProjectData } from '../shared/template.js';
-import { MAX_MEMBERS, scoreIdea } from '../shared/catalog.js';
-import { stepStatus } from '../shared/progress.js';
+import { newProjectData, migrate } from '../shared/template.js';
+import { MAX_MEMBERS, scoreIdea, areaOfType } from '../shared/catalog.js';
+import { PHASES, GATE_STATUS } from '../shared/psf.js';
+import { projectStatus } from '../shared/progress.js';
 import { sendResetEmail, mailEnabled } from './mail.js';
 
 const PORT = Number(process.env.PORT || 4000);
@@ -202,8 +203,9 @@ app.post('/api/users/:id/approve', auth, master, (req, res) => {
     const idea = u.idea ? JSON.parse(u.idea) : {};
     const pid = id();
     const title = clean(req.body?.title) || idea.titulo || `Projeto de ${u.name.split(' ')[0]}`;
-    const data = newProjectData({ linha: u.linha, posto: u.posto, previa: [u.previa, idea.solucao ? `Ideia: ${idea.solucao}` : ''].filter(Boolean).join('\n\n') });
-    if (idea.ganho) data.problema.meta.indicador = idea.ganho;
+    const data = newProjectData({ linha: u.linha, posto: u.posto, autor: u.name, area: areaOfType(u.tipo_melhoria)?.area, previa: u.previa });
+    if (idea.solucao) data.stages.s08.fields.alternativas = `Ideia inicial do colaborador: ${idea.solucao}`;
+    if (idea.ganho) data.stages.s07.fields.indicador = idea.ganho;
     run('INSERT INTO projects (id, title, status, tipo_melhoria, linha, owner_id, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
       pid, title, 'andamento', u.tipo_melhoria, u.linha, u.id, JSON.stringify(data));
     run('INSERT INTO members (project_id, user_id) VALUES (?, ?)', pid, u.id);
@@ -238,10 +240,13 @@ app.get('/api/reset-requests', auth, master, (req, res) => {
 // ---------- projetos ----------
 function projectSummary(p, withData = false) {
   const members = all('SELECT u.* FROM users u JOIN members m ON m.user_id = u.id WHERE m.project_id = ?', p.id).map((u) => publicUser(u, false));
-  const data = JSON.parse(p.data || '{}');
+  const data = migrate(docs.get(p.id)?.data || JSON.parse(p.data || '{}'));
+  const st = projectStatus(data);
+  const cur = st.phases.find((x) => x.n === st.phase);
   const out = {
     id: p.id, title: p.title, status: p.status, tipoMelhoria: p.tipo_melhoria, linha: p.linha, ownerId: p.owner_id,
-    createdAt: p.created_at, updatedAt: p.updated_at, members, progress: (({ total, current }) => ({ total, current }))(stepStatus(docs.get(p.id)?.data || data)),
+    createdAt: p.created_at, updatedAt: p.updated_at, members,
+    progress: { total: st.total, current: st.current, phase: st.phase, maturity: st.maturity, maturityLabel: st.maturityLabel, gate: cur.gate.id, gateStatus: cur.gateStatus },
   };
   if (withData) out.data = data;
   return out;
@@ -337,6 +342,43 @@ app.get('/api/stats', auth, master, (req, res) => {
   });
 });
 
+// ---------- Stage Gates ----------
+// Colaborador solicita a avaliação; o gestor aprova, pede ajustes, mantém em espera ou rejeita.
+app.post('/api/projects/:id/gates/:gate', auth, (req, res) => {
+  const p = one('SELECT * FROM projects WHERE id = ?', req.params.id);
+  if (!p) return bad(res, 404, 'Projeto não encontrado.');
+  if (!canAccess(req.user, p.id)) return bad(res, 403, 'Você não faz parte deste projeto.');
+  const phase = PHASES.find((x) => x.gate.id === req.params.gate);
+  if (!phase) return bad(res, 404, 'Gate inválido.');
+  const action = req.body?.action;
+  const comment = clean(req.body?.comment) || '';
+  const d = loadDoc(p.id);
+  const st = projectStatus(d.data);
+  const info = st.phases.find((x) => x.n === phase.n);
+  const isMaster = req.user.role === 'mestre';
+  if (action === 'solicitado') {
+    if (!info.unlocked) return bad(res, 400, 'Esta fase ainda não foi liberada pelo Gate anterior.');
+    if (info.noTool.length) return bad(res, 400, 'Escolha pelo menos uma ferramenta em cada etapa da fase antes de solicitar a avaliação.');
+  } else if (!isMaster) return bad(res, 403, 'Só o gestor decide o Gate.');
+  if (!['solicitado', 'pendente', ...Object.keys(GATE_STATUS)].includes(action)) return bad(res, 400, 'Ação inválida.');
+  const me = one('SELECT name FROM users WHERE id = ?', req.user.id);
+  const prev = d.data.gates?.[phase.gate.id] || { history: [] };
+  const entry = { status: action, comment, by: me?.name || '', at: new Date().toISOString() };
+  const value = { ...entry, history: [...(prev.history || []), entry].slice(-30) };
+  const op = { t: 'set', p: ['gates', phase.gate.id], v: value };
+  applyOp(d.data, op);
+  scheduleFlush(p.id);
+  io.to(p.id).emit('op', { ops: [op], by: req.user.id });
+  // Status do projeto acompanha as decisões.
+  const after = projectStatus(d.data);
+  const status = action === 'rejeitado' ? 'cancelado' : action === 'espera' ? 'pausado' : after.maturity >= 5 ? 'concluido' : after.maturity >= 4 ? 'medicao' : 'andamento';
+  run("UPDATE projects SET status = ?, updated_at = datetime('now') WHERE id = ?", status, p.id);
+  log(p.id, req.user.id, `${action === 'solicitado' ? 'solicitou a avaliação do' : `registrou "${GATE_STATUS[action]?.label || action}" no`} ${phase.gate.title}`);
+  const out = projectSummary(one('SELECT * FROM projects WHERE id = ?', p.id));
+  io.to(p.id).emit('meta', out);
+  res.json({ ok: true, gate: value, project: out });
+});
+
 // ---------- tempo real ----------
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 12e6 });
@@ -346,7 +388,10 @@ function loadDoc(pid) {
   if (!docs.has(pid)) {
     const p = one('SELECT data FROM projects WHERE id = ?', pid);
     if (!p) return null;
-    docs.set(pid, { data: JSON.parse(p.data || '{}'), dirty: false, timer: null });
+    const raw = JSON.parse(p.data || '{}');
+    const data = migrate(raw);
+    docs.set(pid, { data, dirty: data !== raw, timer: null });
+    if (data !== raw) scheduleFlush(pid);
   }
   return docs.get(pid);
 }
@@ -402,7 +447,9 @@ io.on('connection', (socket) => {
     if (!pid) return;
     const d = loadDoc(pid);
     if (!d) return;
-    const list = Array.isArray(ops) ? ops : [ops];
+    // Decisões de Gate só passam pela rota própria (com checagem de perfil).
+    const list = (Array.isArray(ops) ? ops : [ops]).filter((op) => op && Array.isArray(op.p) && op.p[0] !== 'gates');
+    if (!list.length) return;
     for (const op of list) {
       try { applyOp(d.data, op); } catch (e) { console.error('op inválida', e.message); }
     }

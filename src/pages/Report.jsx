@@ -2,21 +2,21 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { api } from '../lib/api.js';
-import { ISHIKAWA_CATS, STEPS, PROJECT_STATUS } from '../../shared/catalog.js';
-import LineChart, { resultSummary } from '../components/LineChart.jsx';
+import { PROJECT_STATUS } from '../../shared/catalog.js';
+import { STAGES, STAGE, PHASES, ORDER, GATE_STATUS, MATURITY, phaseOf, annexOf } from '../../shared/psf.js';
+import { CATALOG } from '../../shared/tools.js';
+import { migrate } from '../../shared/template.js';
+import { projectStatus, toolFilled, fieldFilled } from '../../shared/progress.js';
+import { KINDS, financeModel } from '../kinds/index.js';
 import { Logo, toast } from '../components/ui.jsx';
+import { fmt, money, months } from '../kinds/kit.jsx';
 
-const STATUS = { todo: 'A fazer', doing: 'Em andamento', done: 'Concluído' };
-const RES = { ok: 'O Funcionou', mid: 'Δ Parcial', no: 'X Não funcionou' };
-const dt = (v) => (v ? new Date(`${v}T12:00`).toLocaleDateString('pt-BR') : '');
-const fmt = (v) => (v == null ? '-' : (Math.round(v * 10) / 10).toLocaleString('pt-BR'));
-
-function Sheet({ p, title, n, children, page, pages }) {
+function Sheet({ p, kicker, children, flow }) {
   return (
-    <section className="sheet">
+    <section className={`sheet ${flow ? 'flow' : ''}`}>
       <div className="sheet-head">
         <Logo size={26} />
-        <div><div className="eyebrow" style={{ fontSize: '7pt' }}>{n ? `Etapa ${n} · ` : ''}{title}</div><h2>{p.title}</h2></div>
+        <div><div className="eyebrow" style={{ fontSize: '7pt' }}>{kicker}</div><h2>{p.title}</h2></div>
         <div className="meta">
           <span>Linha</span><b>{p.linha || '-'}</b>
           <span>Tipo</span><b>{p.tipoMelhoria || '-'}</b>
@@ -25,140 +25,92 @@ function Sheet({ p, title, n, children, page, pages }) {
         </div>
       </div>
       {children}
-      <div className="foot"><span>IGNIS · Identify Gaps and Navigate Ideas to Solutions</span><span>Impresso em {new Date().toLocaleDateString('pt-BR')} · Página {page}/{pages}</span></div>
+      <div className="foot"><span>IGNIS · Project Solution Framework</span><span>Impresso em {new Date().toLocaleDateString('pt-BR')}</span></div>
     </section>
   );
 }
 
-const Box = ({ k, children, style }) => <div className="box" style={style}>{k && <span className="k">{k}</span>}{children || ' '}</div>;
-const ActionsT = ({ list = [] }) => (
-  <table><thead><tr><th>#</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Status</th></tr></thead>
-    <tbody>{(list.length ? list : [{}, {}, {}]).map((a, i) => <tr key={a.id || i}><td>{i + 1}</td><td>{a.oque}</td><td>{a.quem}</td><td>{dt(a.quando)}</td><td>{a.id ? STATUS[a.status || 'todo'] : ''}</td></tr>)}</tbody></table>
-);
+const fv = (f, v) => (Array.isArray(v) ? v.join(', ') : f.t === 'date' && v ? new Date(`${v}T12:00`).toLocaleDateString('pt-BR') : v);
+function Ficha({ data, sid }) {
+  const st = STAGE[sid]; const f = data.stages?.[sid]?.fields || {};
+  const items = st.fields.filter((x) => fieldFilled(f[x.k]));
+  if (!items.length) return null;
+  return (
+    <div className="a4-ficha">
+      {items.map((x) => x.t === 'images'
+        ? <div key={x.k} className="box wide"><span className="k">{x.l}</span><div className="imgs">{f[x.k].map((i) => <img key={i.id} src={i.src} alt="" />)}</div></div>
+        : <div key={x.k} className={`box ${x.t === 'area' || x.wide ? 'wide' : ''}`}><span className="k">{x.l}</span>{fv(x, f[x.k])}</div>)}
+    </div>
+  );
+}
+function ToolBlock({ t, sid }) {
+  const def = CATALOG[t.tool]; const K = KINDS[def.kind];
+  const a = annexOf(sid);
+  return <div className="a4-tool"><h4><span>{a?.id}</span>{def.name}</h4><div className="tv a4-tv"><K.View d={t.data} cfg={def.cfg} def={def} /></div></div>;
+}
+function StageSheet({ p, sid }) {
+  const st = STAGE[sid]; const ph = phaseOf(sid);
+  const tools = (p.data.stages?.[sid]?.tools || []).filter(toolFilled);
+  return (
+    <Sheet p={p} kicker={`Fase ${ph.n} · Etapa ${st.n} de 17`} flow>
+      <h3><span>{st.n}</span>{st.title}</h3>
+      <p className="a4-q">{st.question}</p>
+      <Ficha data={p.data} sid={sid} />
+      {tools.map((t) => <ToolBlock key={t.id} t={t} sid={sid} />)}
+    </Sheet>
+  );
+}
 
-function sheets(p) {
+function Summary({ p }) {
   const d = p.data;
-  const s = resultSummary(d);
-  const sol = (d.ideias.lista || []).find((i) => i.id === d.ideias.solucao);
-  const w = d.problema.w5h2 || {};
-  const H = (n, t) => <h3><span>{n}</span>{t}</h3>;
-  return {
-    resumo: { title: 'Resumo em uma página', body: (
-      <>
-        <div className="g2">
-          <div className="stack tight">{H('1', 'Problema')}<Box>{d.problema.esclarecimento || d.problema.descricao}</Box>
-            <div className="g3"><Box k="Indicador">{d.problema.meta.indicador}</Box><Box k="Hoje">{d.problema.meta.atual} {s.unit}</Box><Box k="Meta">{d.problema.meta.alvo} {s.unit}</Box></div></div>
-          <div className="stack tight">{H('2', 'Causa raiz')}<Box>{d.causa.causaRaiz}</Box><Box k="Verificação">{d.causa.verificacao}</Box></div>
-        </div>
-        <div className="g2">
-          <div className="stack tight">{H('3', 'Solução')}<Box><b>{sol?.titulo}</b>{sol?.descricao ? `\n${sol.descricao}` : ''}</Box></div>
-          <div className="stack tight">{H('4', 'Plano de ação')}<table><thead><tr><th>O quê</th><th>Quem</th><th>Status</th></tr></thead><tbody>{(d.prototipo.acoes || []).slice(0, 4).map((a) => <tr key={a.id}><td>{a.oque}</td><td>{a.quem}</td><td>{STATUS[a.status || 'todo']}</td></tr>)}</tbody></table></div>
-        </div>
-        {H('5', 'Resultados (3 meses)')}
-        <div className="g3"><Box k="Média recente">{fmt(s.recent)} {s.unit}</Box><Box k="Variação">{s.delta == null ? '-' : `${fmt(s.delta)}%`}</Box><Box k="Ganho financeiro">{d.resultados.ganhoFinanceiro ? `R$ ${d.resultados.ganhoFinanceiro}` : ''}</Box></div>
-        <LineChart points={d.resultados.medicoes} baseline={d.problema.meta.atual} target={d.problema.meta.alvo} unit={s.unit} width={760} height={170} />
-        {H('6', 'Conclusão')}
-        <div className="g2"><Box k="Resumo">{d.conclusao.resumo}</Box><Box k="Futuras aplicações">{d.conclusao.futuras}</Box></div>
-      </>
-    ) },
-    problema: { n: 1, title: 'Identificação do problema', body: (
-      <>
-        <div className="g3"><Box k="Área / linha">{d.problema.area}</Box><Box k="Posto">{d.problema.posto}</Box><Box k="Início">{dt(d.problema.dataInicio)}</Box></div>
-        <Box k="Descrição do problema">{d.problema.descricao}</Box>
-        <h3>Esclarecimento (5W2H)</h3>
-        <table><tbody>{[['O quê?', w.oque], ['Onde?', w.onde], ['Quando?', w.quando], ['Quem?', w.quem], ['Qual (frequência)?', w.qual], ['Quanto?', w.quanto], ['Por que é um problema?', w.porque], ['Padrão', w.padrao]].map(([k, v]) => <tr key={k}><th style={{ width: '42mm' }}>{k}</th><td>{v}</td></tr>)}</tbody></table>
-        <h3>Meta</h3>
-        <div className="g3"><Box k="Indicador">{d.problema.meta.indicador} {s.unit && `(${s.unit})`}</Box><Box k="Hoje → Meta">{d.problema.meta.atual} → {d.problema.meta.alvo}</Box><Box k="Prazo">{dt(d.problema.meta.prazo)}</Box></div>
-        <div className="g2"><Box k="Proteger o cliente (contenção)">{d.problema.contencao}</Box><Box k="Dados de suporte">{d.problema.dadosSuporte}</Box></div>
-        {d.problema.imagens?.length > 0 && <div className="imgs">{d.problema.imagens.map((i) => <img key={i.id} src={i.src} alt="" />)}</div>}
-        <Box k="Declaração final do problema">{d.problema.esclarecimento}</Box>
-      </>
-    ) },
-    causa: { n: 2, title: 'Análise de causa raiz', body: (
-      <>
-        <h3>Diagrama de Ishikawa</h3>
-        <Box k="Efeito">{d.causa.efeito}</Box>
-        <div className="g3">{ISHIKAWA_CATS.map((c) => <Box key={c.id} k={c.label} style={{ minHeight: '30mm' }}>{(d.causa.ishikawa[c.id] || []).map((x) => `${x.provavel ? '★ ' : '• '}${x.text}`).join('\n')}</Box>)}</div>
-        <h3>5 Porquês</h3>
-        {(d.causa.porques || []).length === 0 && <Box> </Box>}
-        {(d.causa.porques || []).map((ch) => (
-          <table key={ch.id}><tbody>
-            <tr><th style={{ width: '30mm' }}>Causa</th><td>{ch.causa}</td></tr>
-            {(ch.whys || []).map((wy, i) => <tr key={i}><th>Por quê {i + 1}?</th><td style={ch.raiz === i ? { fontWeight: 700 } : undefined}>{wy}{ch.raiz === i ? '  ← causa raiz' : ''}</td></tr>)}
-          </tbody></table>
-        ))}
-        <div className="g2"><Box k="Causa raiz">{d.causa.causaRaiz}</Box><Box k="Verificação da causa raiz">{d.causa.verificacao}</Box></div>
-      </>
-    ) },
-    ideias: { n: 3, title: 'Ideias e solução', body: (
-      <>
-        <Box k="Causa raiz a eliminar">{d.causa.causaRaiz}</Box>
-        <table><thead><tr><th>#</th><th>Ideia</th><th>Descrição</th><th>Impacto</th><th>Esforço</th><th>Votos</th></tr></thead>
-          <tbody>{(d.ideias.lista || []).map((i, n) => <tr key={i.id} style={i.id === d.ideias.solucao ? { background: '#E7F6F0' } : undefined}><td>{n + 1}</td><td><b>{i.titulo}</b>{i.id === d.ideias.solucao ? ' ✓' : ''}</td><td>{i.descricao}</td><td>{i.impacto || 3}/5</td><td>{i.esforco || 3}/5</td><td>{(i.votos || []).length}</td></tr>)}</tbody></table>
-        <div className="g2"><Box k="Solução escolhida"><b>{sol?.titulo}</b>{sol?.descricao ? `\n${sol.descricao}` : ''}</Box><Box k="Por que esta solução">{d.ideias.justificativa}</Box></div>
-        {sol?.imagens?.length > 0 && <div className="imgs">{sol.imagens.map((i) => <img key={i.id} src={i.src} alt="" />)}</div>}
-      </>
-    ) },
-    prototipo: { n: 4, title: 'Protótipo e plano de ação', body: (
-      <>
-        <div className="g2"><Box k="Protótipo">{d.prototipo.descricao}</Box><Box k="Plano de teste">{d.prototipo.planoTeste}{d.prototipo.local ? `\nOnde: ${d.prototipo.local}` : ''}{d.prototipo.inicio ? `\nDe ${dt(d.prototipo.inicio)} a ${dt(d.prototipo.fim)}` : ''}</Box></div>
-        {d.prototipo.imagens?.length > 0 && <div className="imgs">{d.prototipo.imagens.map((i) => <img key={i.id} src={i.src} alt="" />)}</div>}
-        <h3>Plano de ação</h3>
-        <ActionsT list={d.prototipo.acoes} />
-        <h3>Registro PDCA</h3>
-        <table><thead><tr><th>Data</th><th>Plan (passo e expectativa)</th><th>Do</th><th>Check</th><th>Act (aprendizado)</th><th>Res.</th></tr></thead>
-          <tbody>{(d.prototipo.pdca?.length ? d.prototipo.pdca : [{}, {}]).map((c, i) => <tr key={c.id || i}><td>{dt(c.data)}</td><td>{c.passo}{c.expectativa ? `\nEsperado: ${c.expectativa}` : ''}</td><td>{c.feito}</td><td>{c.aconteceu}</td><td>{c.aprendizado}</td><td>{RES[c.resultado] || ''}</td></tr>)}</tbody></table>
-      </>
-    ) },
-    resultados: { n: 5, title: 'Análise de resultados (3 meses)', body: (
-      <>
-        <div className="g3"><Box k="Antes">{fmt(s.base)} {s.unit}</Box><Box k="Meta">{fmt(s.target)} {s.unit}</Box><Box k="Média recente · variação">{fmt(s.recent)} {s.unit} · {s.delta == null ? '-' : `${fmt(s.delta)}%`}</Box></div>
-        <h3>{s.indicador}</h3>
-        <LineChart points={d.resultados.medicoes} baseline={d.problema.meta.atual} target={d.problema.meta.alvo} unit={s.unit} width={760} height={260} />
-        <table><thead><tr>{d.resultados.medicoes.map((m) => <th key={m.id}>{m.label}</th>)}</tr></thead><tbody><tr>{d.resultados.medicoes.map((m) => <td key={m.id}>{m.valor}</td>)}</tr></tbody></table>
-        <div className="g2"><Box k="Ganho financeiro">{d.resultados.ganhoFinanceiro ? `R$ ${d.resultados.ganhoFinanceiro} por ano` : ''}</Box><Box k="Ganhos qualitativos">{d.resultados.ganhoQualitativo}</Box></div>
-        <Box k="Verificação">{d.resultados.checklist.map((c) => `${c.ok ? '☑' : '☐'} ${c.text}`).join('\n')}{d.resultados.verificacao ? `\n\n${d.resultados.verificacao}` : ''}</Box>
-      </>
-    ) },
-    conclusao: { n: 6, title: 'Conclusão e padronização', body: (
-      <>
-        <Box k="Resumo executivo">{d.conclusao.resumo}</Box>
-        <div className="g2"><Box k="Tornar permanente">{d.conclusao.checklist.map((c) => `${c.ok ? '☑' : '☐'} ${c.text}`).join('\n')}</Box><Box k="Lições aprendidas">{d.conclusao.licoes}</Box></div>
-        <h3>Ações de padronização</h3>
-        <ActionsT list={d.conclusao.padronizacao} />
-        <Box k="Futuras aplicações">{d.conclusao.futuras}</Box>
-      </>
-    ) },
-  };
+  const ps = projectStatus(d);
+  const F = (sid) => d.stages?.[sid]?.fields || {};
+  const finT = ['s12', 's17'].flatMap((s) => d.stages?.[s]?.tools || []).find((t) => CATALOG[t.tool]?.kind === 'finance' && toolFilled(t));
+  const fin = finT ? financeModel(finT.data) : null;
+  const B = ({ k, v }) => <div className="box"><span className="k">{k}</span>{fieldFilled(v) ? v : '-'}</div>;
+  const s07 = F('s07');
+  return (
+    <Sheet p={p} kicker="Resumo executivo em uma página">
+      <div className="g2"><B k="1. Problema" v={F('s03').declaracao} /><B k="2. Causa raiz" v={F('s06').causaRaiz} /></div>
+      <div className="g2"><B k="3. Solução" v={F('s09').solucao || F('s10').conceito} /><B k="4. Indicador e meta" v={s07.indicador ? `${s07.kpiEms ? `${s07.kpiEms} · ` : ''}${s07.indicador}: ${s07.baseline || '?'} → ${s07.meta || '?'} ${s07.unidade || ''}` : ''} /></div>
+      <div className="g3"><B k="Investimento" v={fin ? money(fin.capex) : F('s17').investimento} /><B k="Economia líquida anual" v={fin ? money(fin.anual) : ''} /><B k="Payback" v={fin?.payback != null ? months(fin.payback) : ''} /></div>
+      <B k="5. Pedido de decisão" v={F('s17').pedido} />
+      <div className="g2"><B k="Resultado obtido" v={F('s16').resultado} /><B k="Aprendizados" v={F('s16').licoes} /></div>
+      <h3><span>✓</span>Stage Gates · maturidade {ps.maturity}/5 ({MATURITY[ps.maturity]})</h3>
+      <table><thead><tr><th>Gate</th><th>Situação</th><th>Por</th><th>Comentário</th></tr></thead>
+        <tbody>{ps.phases.map((ph) => <tr key={ph.n}><td>{ph.gate.title}</td><td>{GATE_STATUS[ph.gateStatus]?.label}</td><td>{ph.gateData?.by}</td><td>{ph.gateData?.comment}</td></tr>)}</tbody></table>
+      <h3><span>#</span>Ferramentas utilizadas</h3>
+      <table><thead><tr><th>Etapa</th><th>Ferramentas preenchidas</th></tr></thead>
+        <tbody>{ORDER.filter((s) => ps.stages[s].filled).map((s) => <tr key={s}><td>{STAGE[s].n}. {STAGE[s].short}</td><td>{ps.stages[s].filledTools.map((t) => CATALOG[t.tool].name).join(', ')}</td></tr>)}</tbody></table>
+    </Sheet>
+  );
 }
 
 export default function Report() {
   const { id } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [sp] = useSearchParams();
   const [p, setP] = useState(null);
-  useEffect(() => { api(`/projects/${id}`).then((r) => setP(r.project)).catch((e) => toast(e.message, 'err')); }, [id]);
-  if (!p) return <div className="empty" style={{ paddingTop: 120 }}>Montando folhas A4…</div>;
-  const all = sheets(p);
-  const sec = params.get('secao');
-  const keys = sec && all[sec] ? [sec] : Object.keys(all);
+  useEffect(() => { api(`/projects/${id}`).then((r) => setP({ ...r.project, data: migrate(r.project.data) })).catch((e) => toast(e.message, 'err')); }, [id]);
+  if (!p) return <div className="empty" style={{ paddingTop: 120 }}>Montando folhas…</div>;
+  const etapa = sp.get('etapa'), ferramenta = sp.get('ferramenta');
+  const ps = projectStatus(p.data);
+  let content;
+  if (ferramenta) {
+    const sid = ORDER.find((s) => (p.data.stages?.[s]?.tools || []).some((t) => t.id === ferramenta));
+    const t = sid && p.data.stages[sid].tools.find((x) => x.id === ferramenta);
+    content = t ? <Sheet p={p} kicker={`Etapa ${STAGE[sid].n} · ${STAGE[sid].short}`} flow><ToolBlock t={t} sid={sid} /></Sheet> : <p>Ferramenta não encontrada.</p>;
+  } else if (etapa && STAGE[etapa]) content = <StageSheet p={p} sid={etapa} />;
+  else content = <><Summary p={p} />{ORDER.filter((s) => ps.stages[s].hasContent).map((s) => <StageSheet key={s} p={p} sid={s} />)}</>;
   return (
-    <div>
-      <div className="report-bar no-print">
-        <div>
-          <div className="row"><Link to={`/projeto/${id}${sec ? `/${sec}` : ''}`} className="btn secondary sm"><ArrowLeft size={15} />Voltar</Link><b>Folhas A4</b></div>
-          <div className="row wrap">
-            <select className="input" style={{ width: 260, minHeight: 36, padding: '6px 34px 6px 12px' }} value={sec || ''} onChange={(e) => setParams(e.target.value ? { secao: e.target.value } : {})}>
-              <option value="">Relatório completo (7 folhas)</option>
-              <option value="resumo">Resumo em uma página</option>
-              {STEPS.slice(0, 6).map((s) => <option key={s.id} value={s.id}>{s.n}. {s.label}</option>)}
-            </select>
-            <button className="btn sm" onClick={() => window.print()}><Printer size={15} />Imprimir ou salvar PDF</button>
-          </div>
-        </div>
-      </div>
-      <div className="sheets">
-        {keys.map((k, i) => <Sheet key={k} p={p} title={all[k].title} n={all[k].n} page={i + 1} pages={keys.length}>{all[k].body}</Sheet>)}
-      </div>
+    <div className="report">
+      <div className="report-bar no-print"><div>
+        <Link to={`/projeto/${id}${etapa ? `/${etapa}` : ''}`} className="btn secondary sm"><ArrowLeft size={15} />Voltar</Link>
+        <span className="small muted">Folhas A4 com o que foi preenchido. Use "Salvar como PDF" na impressão.</span>
+        <button className="btn sm" onClick={() => window.print()}><Printer size={15} />Imprimir / PDF</button>
+      </div></div>
+      <div className="sheets">{content}</div>
     </div>
   );
 }
+
+export { STAGES, PHASES };

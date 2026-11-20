@@ -1,58 +1,50 @@
-import { ISHIKAWA_CATS, STEPS } from './catalog.js';
+// Maturidade do projeto: fases liberadas pelos Stage Gates, etapas e ferramentas.
+import { STAGES, PHASES, ORDER, MATURITY } from './psf.js';
+import { CATALOG } from './tools.js';
+import { isFilled } from './kinds.js';
 
-const filled = (v) => typeof v === 'string' ? v.trim().length > 0 : v != null && v !== '';
+export const fieldFilled = (v) => Array.isArray(v) ? v.length > 0 : typeof v === 'string' ? v.trim().length > 0 : v != null && v !== '';
 
-// Critério mínimo de cada etapa e uma porcentagem de preenchimento.
-export function stepStatus(data = {}) {
-  const p = data.problema || {}, c = data.causa || {}, i = data.ideias || {}, pr = data.prototipo || {},
-    r = data.resultados || {}, co = data.conclusao || {};
-  const w = p.w5h2 || {};
-  const causes = ISHIKAWA_CATS.reduce((n, cat) => n + ((c.ishikawa || {})[cat.id] || []).filter((x) => filled(x.text)).length, 0);
-  const meds = (r.medicoes || []).filter((m) => filled(m.valor)).length;
-  const pct = (arr) => Math.round((arr.filter(Boolean).length / arr.length) * 100);
-  const s = {
-    problema: {
-      done: filled(p.descricao) && filled(p.meta?.indicador) && filled(p.meta?.alvo),
-      need: 'Descreva o problema e defina a meta (indicador e alvo).',
-      pct: pct([filled(p.descricao), ...['oque', 'onde', 'quando', 'quem', 'qual', 'porque'].map((k) => filled(w[k])), filled(p.meta?.indicador), filled(p.meta?.atual), filled(p.meta?.alvo), filled(p.esclarecimento)]),
-    },
-    causa: {
-      done: causes >= 3 && filled(c.causaRaiz),
-      need: 'Registre pelo menos 3 causas no Ishikawa e defina a causa raiz.',
-      pct: pct([filled(c.efeito), causes >= 1, causes >= 3, causes >= 6, (c.porques || []).length > 0, filled(c.causaRaiz), filled(c.verificacao)]),
-    },
-    ideias: {
-      done: (i.lista || []).length > 0 && filled(i.solucao),
-      need: 'Cadastre ideias e escolha a solução.',
-      pct: pct([(i.lista || []).length > 0, (i.lista || []).length > 2, filled(i.solucao)]),
-    },
-    prototipo: {
-      done: (pr.acoes || []).length > 0 && filled(pr.descricao),
-      need: 'Descreva o protótipo e crie o plano de ação.',
-      pct: pct([filled(pr.descricao), filled(pr.planoTeste), (pr.acoes || []).length > 0, (pr.pdca || []).length > 0, (pr.imagens || []).length > 0]),
-    },
-    resultados: {
-      done: meds >= 1,
-      need: 'Lance pelo menos uma medição do indicador.',
-      pct: Math.round(Math.min(1, meds / 12) * 70 + (filled(r.ganhoFinanceiro) || filled(r.ganhoQualitativo) ? 15 : 0) + (filled(r.verificacao) ? 15 : 0)),
-    },
-    conclusao: {
-      done: filled(co.resumo) || filled(co.licoes),
-      need: 'Escreva o resumo e as lições aprendidas.',
-      pct: pct([filled(co.resumo), filled(co.licoes), filled(co.futuras), (co.padronizacao || []).length > 0, (co.checklist || []).some((x) => x.ok)]),
-    },
-    pitch: { done: false, need: '', pct: 0 },
+export function toolFilled(t) {
+  const def = CATALOG[t.tool];
+  return !!def && isFilled(def.kind, t.data);
+}
+
+export function stageInfo(data, sid) {
+  const def = STAGES.find((s) => s.id === sid);
+  const st = data?.stages?.[sid] || { fields: {}, tools: [] };
+  const f = st.fields || {};
+  const filledFields = def.fields.filter((x) => fieldFilled(f[x.k])).length;
+  const tools = st.tools || [];
+  const filledTools = tools.filter(toolFilled);
+  const keyMissing = def.key.filter((k) => !fieldFilled(f[k])).map((k) => def.fields.find((x) => x.k === k).l);
+  const fichaPct = Math.round((filledFields / def.fields.length) * 100);
+  return {
+    chosen: tools.length, filled: filledTools.length, filledTools,
+    fichaPct, keyMissing,
+    hasContent: filledFields > 0 || filledTools.length > 0,
+    pct: Math.round(fichaPct * 0.6 + (filledTools.length ? 40 : tools.length ? 15 : 0)),
   };
-  // Uma etapa só abre quando a anterior cumpre o mínimo.
-  let open = true;
-  for (const st of STEPS) {
-    s[st.id].locked = !open;
-    open = open && s[st.id].done;
-  }
-  s.pitch.done = s.conclusao.done;
-  s.pitch.pct = s.conclusao.done ? 100 : 0;
-  const core = STEPS.filter((x) => x.id !== 'pitch');
-  s.total = Math.round(core.reduce((n, st) => n + s[st.id].pct, 0) / core.length);
-  s.current = (core.find((st) => !s[st.id].done) || STEPS[STEPS.length - 1]).id;
-  return s;
+}
+
+export function projectStatus(data = {}) {
+  const stages = Object.fromEntries(STAGES.map((s) => [s.id, stageInfo(data, s.id)]));
+  const gates = data.gates || {};
+  let unlocked = true;
+  let maturity = 0;
+  let countingMaturity = true;
+  const phases = PHASES.map((p) => {
+    const g = gates[p.gate.id] || { status: 'pendente' };
+    const noTool = p.stages.filter((sid) => stages[sid].chosen === 0);
+    const keyMissing = p.stages.flatMap((sid) => stages[sid].keyMissing.map((l) => ({ sid, l })));
+    const info = { ...p, unlocked, gateStatus: g.status, gateData: g, noTool, keyMissing, canRequest: unlocked && noTool.length === 0 && g.status !== 'aprovado' && g.status !== 'solicitado' && g.status !== 'rejeitado' };
+    if (countingMaturity && g.status === 'aprovado') maturity++; else countingMaturity = false;
+    unlocked = unlocked && g.status === 'aprovado';
+    for (const sid of p.stages) stages[sid].locked = !info.unlocked;
+    return info;
+  });
+  const current = phases.find((p) => p.gateStatus !== 'aprovado') || phases[phases.length - 1];
+  const currentStage = current.stages.find((sid) => !stages[sid].filled) || current.stages[0];
+  const total = Math.round(ORDER.reduce((n, sid) => n + stages[sid].pct, 0) / ORDER.length * 0.7 + (maturity / 5) * 30);
+  return { stages, phases, maturity, maturityLabel: MATURITY[maturity], phase: current.n, current: currentStage, total };
 }

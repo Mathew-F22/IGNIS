@@ -1,16 +1,45 @@
 # IGNIS · Identify Gaps and Navigate Ideas to Solutions
 
-Plataforma de gestão de ideias e resolução de problemas. O time preenche as ferramentas direto no sistema, em tempo real, na ordem do método:
+Plataforma de gestão de ideias e resolução de problemas baseada no **Project Solution Framework (PSF)**. O time preenche as ferramentas direto no sistema, em tempo real, seguindo a maturidade do projeto.
 
-1. **Identificação do problema**: contexto, 5W2H, meta (hoje → alvo), contenção e evidências.
-2. **Análise de causa raiz**: Diagrama de Ishikawa (6M) interativo, com cada categoria editável, e 5 Porquês ligados às causas prováveis.
-3. **Ideias e solução**: quadro de ideias com fotos, votação, impacto × esforço e escolha da solução.
-4. **Protótipo e plano de ação**: plano de teste, contramedidas (o quê, quem, quando, status) e registro PDCA.
-5. **Análise de resultados (3 meses)**: 12 semanas ou 3 meses de medições, gráfico com linha de base e meta, ganhos.
-6. **Conclusão e padronização**: tornar permanente, lições aprendidas, futuras aplicações.
-7. **Pitch**: slides montados automaticamente, apresentados na plataforma e exportados em PDF ou PowerPoint.
+## Como o projeto avança
 
-Cada etapa só abre quando a anterior cumpre o mínimo. As ferramentas seguem as máscaras EMS (QPS, PS e A3).
+**17 etapas em 5 fases**, cada fase fechada por um **Stage Gate** que o gestor avalia:
+
+| Fase | Etapas | Gate |
+| --- | --- | --- |
+| 1 · Problema | 1 Governança · 2 Contexto · 3 Problema | G1 · Problema reconhecido |
+| 2 · Diagnóstico | 4 Processo · 5 Dados · 6 Causa raiz · 7 Metas | G2 · Diagnóstico validado |
+| 3 · Solução | 8 Alternativas · 9 Seleção · 10 Protótipo · 11 Testes | G3 · Solução validada |
+| 4 · Autorização | 12 Viabilidade · 13 Riscos · 14 Implementação · 17 Decisão | G4 · Projeto autorizado |
+| 5 · Resultados | 15 Controle · 16 Resultados | G5 · Resultado comprovado |
+
+- Cada etapa tem uma **ficha** (os campos do slide executivo) e uma **biblioteca de ferramentas** (todas as do material PSF, cerca de 385). O colaborador escolhe pelo menos uma por etapa; nenhuma é obrigatória.
+- A biblioteca ajuda a escolher: recomendadas primeiro, a árvore "Qual é a necessidade?" e a matriz "Situação identificada".
+- 31 tipos de ferramenta são interativos: Ishikawa (6M, 8M, 4P), 5 Porquês, Pareto, histograma, carta de controle, capabilidade (Cp/Cpk), dispersão e regressão, teste t, DOE, fluxograma, Yamazumi, matriz de decisão ponderada, Pugh, AHP, VPL/TIR/payback, Monte Carlo, matriz de risco, FMEA, Gantt, RACI, PDCA, antes e depois e histórico de indicador EMS. As demais viram modelos estruturados para preencher.
+- Uma fase só abre quando o Gate anterior é **aprovado**. O time pede a avaliação; o gestor aprova, pede ajustes, coloca em espera ou rejeita, com comentário e histórico.
+- **Só o que foi preenchido aparece** no A4 e nos slides.
+
+## Indicadores EMS
+
+A ferramenta **Histórico do indicador EMS** (etapas 5, 7, 15 e 16) registra o indicador período a período (semanal, mensal ou trimestral), marca quando a melhoria entrou e mostra antes × depois × meta. As fórmulas seguem o material EMS:
+
+| Pilar | Indicadores |
+| --- | --- |
+| Segurança | TCIR, FAIR\* |
+| Qualidade | NRFT, QI\*, SCR |
+| Custo | DFP (com perdas EI, MC, QC, PP), Sucata\*, CCPP, LP, OEE |
+| Entrega | DSA, SDWS, SDFG |
+| Pessoas | Absenteísmo\*, Treinamentos\*, horas de treinamento\* |
+
+\* Não constam no material EMS: usam a fórmula usual da fábrica e podem ser ajustadas em `shared/kpis.js`.
+
+Na apresentação, cada indicador ganha um slide de histórico e o time escolhe o **período avaliado** (de/até) direto no slide.
+
+## Apresentação e A4
+
+- **Slides**: sequência executiva de 17 slides (identificação, resumo, contexto, problema, diagnóstico, causa raiz, metas, alternativas, solução, protótipo, testes, riscos, investimento, implementação, controle, resultados, decisão), mais os slides de indicador e o **dossiê técnico** com os anexos A a H. Dá para ocultar slides, escolher a evidência de destaque de cada etapa (estrela), apresentar em tela cheia e exportar em PDF ou PowerPoint (no PowerPoint cada slide vai como imagem em alta resolução, com as anotações do apresentador).
+- **A4**: resumo executivo de uma página e uma folha por etapa com conteúdo. Também imprime uma etapa ou uma ferramenta isolada.
 
 ## Funcionalidades
 
@@ -19,7 +48,7 @@ Cada etapa só abre quando a anterior cumpre o mínimo. As ferramentas seguem as
 - **Cadastro do colaborador com a ideia**: foto, matrícula, linha, cargo, turno, time, prévia do projeto, tipo de melhoria (os 14 tipos do formulário "Banco de Ideias") e perguntas de viabilidade que geram a nota de 0 a 100. O acesso é liberado quando o gestor seleciona a ideia.
 - **Recuperação de senha**: por e-mail (se configurar SMTP) e, sempre, como pedido no painel do gestor, que define uma senha provisória.
 - **Tempo real**: todos veem as alterações na hora, quem está online, em qual etapa e qual campo cada pessoa está editando.
-- **Impressão A4**: cada ferramenta vira uma folha A4, mais um resumo de uma página e o relatório completo (imprimir ou salvar em PDF).
+- **Exportação Excel**: projetos, fichas das etapas, ferramentas, Stage Gates, indicadores EMS e colaboradores.
 
 ## Como rodar
 
@@ -27,11 +56,11 @@ Requisito: [Node.js 22.13 ou superior](https://nodejs.org) (versão LTS). Nada m
 
 ```bash
 npm install
-npm run seed   # opcional: cria um projeto de exemplo completo
+npm run seed   # opcional: cria um projeto de exemplo completo (gates 1 a 4 aprovados, DFP mensal)
 npm run dev
 ```
 
-Abra **http://localhost:5173**. No primeiro acesso, o sistema pede para criar o login mestre.
+Abra **http://localhost:5173**. O `npm run dev` não reinicia o servidor sozinho (isso causava recarregamento em loop no Windows); se for mexer no código do servidor, use `npm run dev:watch`. No primeiro acesso, o sistema pede para criar o login mestre.
 
 Com `npm run seed`, já existem estes logins (senha `ignis123`):
 
@@ -55,12 +84,12 @@ Copie `.env.example` para `.env` e preencha o SMTP (uma conta Gmail com "senha d
 
 ## Tecnologias
 
-React 18 + Vite, Node.js + Express, Socket.IO (tempo real), SQLite nativo do Node, pptxgenjs (PowerPoint), SheetJS (Excel), fonte Inter, ícones Lucide. Tudo open source e gratuito.
+React 19 + Vite, Node.js + Express, Socket.IO (tempo real), SQLite nativo do Node, pptxgenjs e html-to-image (PowerPoint), SheetJS (Excel), fonte Inter, ícones Lucide. Tudo open source e gratuito.
 
 ## Estrutura
 
 ```
 server/   API, autenticação, tempo real e banco
-shared/   catálogos (tipos de melhoria, etapas), modelo do projeto, regras de progresso
-src/      interface: páginas, ferramentas (src/tools), slides, folhas A4
+shared/   PSF (etapas, fases, gates), catálogo de ferramentas, indicadores EMS, modelo do projeto, progresso
+src/      interface: páginas, tipos de ferramenta (src/kinds), biblioteca, slides (src/lib/deck.jsx), folhas A4
 ```

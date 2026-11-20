@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, FolderKanban, KeyRound, Sparkles, UserPlus, Users, Trophy, Download } from 'lucide-react';
 import { api, download } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
-import { IMPROVEMENT_AREAS, STEPS, PROJECT_STATUS } from '../../shared/catalog.js';
+import { IMPROVEMENT_AREAS, PROJECT_STATUS } from '../../shared/catalog.js';
+import { PHASES } from '../../shared/psf.js';
 import { exportProjectsXlsx } from '../lib/exporters.js';
 import { Empty, toast } from '../components/ui.jsx';
 import { ProjectCard } from './Projects.jsx';
@@ -30,7 +31,8 @@ export default function Dashboard() {
 
   const byArea = IMPROVEMENT_AREAS.map((a) => ({ ...a, n: (projects || []).filter((p) => a.types.includes(p.tipoMelhoria)).length }));
   const maxArea = Math.max(1, ...byArea.map((a) => a.n));
-  const byStep = STEPS.slice(0, 6).map((s) => ({ ...s, n: (projects || []).filter((p) => p.progress?.current === s.id && p.status !== 'concluido').length }));
+  const byStep = PHASES.map((ph) => ({ id: ph.n, short: `F${ph.n} · ${ph.title.split(' ')[0]}`, n: (projects || []).filter((p) => p.progress?.phase === ph.n && p.status !== 'concluido').length }));
+  const waiting = (projects || []).filter((p) => p.progress?.gateStatus === 'solicitado');
 
   return (
     <div className="page">
@@ -65,6 +67,12 @@ export default function Dashboard() {
         </Link>
       )}
 
+      {isMaster && waiting.length > 0 && waiting.map((p) => (
+        <Link key={p.id} to={`/projeto/${p.id}/${p.progress.gate}`} className="lock-banner" style={{ textDecoration: 'none' }}>
+          <Trophy /> <span className="grow"><b>{p.title}</b> pediu a avaliação do Gate {p.progress.gate.slice(1)}. Abra para aprovar, pedir ajustes, manter em espera ou rejeitar.</span><ArrowRight size={18} />
+        </Link>
+      ))}
+
       {isMaster && projects?.length > 0 && (
         <div className="grid-2" style={{ marginBottom: 28 }}>
           <div className="card">
@@ -80,8 +88,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="card">
-            <h3 style={{ marginBottom: 16 }}>Em que etapa estão</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, alignItems: 'end', height: 130 }}>
+            <h3 style={{ marginBottom: 16 }}>Em que fase estão</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, alignItems: 'end', height: 130 }}>
               {byStep.map((s) => (
                 <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
                   <b>{s.n}</b>

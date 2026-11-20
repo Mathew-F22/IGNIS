@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, FolderOpen } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
-import { LINES, PROJECT_STATUS, STEPS, areaOfType } from '../../shared/catalog.js';
+import { LINES, PROJECT_STATUS, areaOfType } from '../../shared/catalog.js';
+import { STAGE, GATE_STATUS } from '../../shared/psf.js';
 import { AvatarStack, Empty, Field, Modal, Progress, toast } from '../components/ui.jsx';
 import { TypeSelect, TypeTag } from '../components/pickers.jsx';
 import MemberPicker from '../components/MemberPicker.jsx';
@@ -12,7 +13,8 @@ const statusTag = { ideia: '', andamento: 'blue', medicao: 'amber', concluido: '
 
 export function ProjectCard({ p }) {
   const color = areaOfType(p.tipoMelhoria)?.color || 'var(--navy-900)';
-  const step = STEPS.find((s) => s.id === p.progress?.current);
+  const step = STAGE[p.progress?.current];
+  const gs = p.progress?.gateStatus;
   return (
     <Link to={`/projeto/${p.id}`} className="project-card">
       <span className="stripe" style={{ background: color }} />
@@ -23,7 +25,7 @@ export function ProjectCard({ p }) {
       <h3>{p.title}</h3>
       {p.tipoMelhoria && <div><TypeTag type={p.tipoMelhoria} /></div>}
       <div className="stack tight">
-        <div className="row between small"><span className="muted">{p.status === 'concluido' ? 'Concluído' : `Etapa: ${step?.label || '-'}`}</span><b>{p.progress?.total ?? 0}%</b></div>
+        <div className="row between small"><span className="muted">{p.status === 'concluido' ? 'Concluído' : `Fase ${p.progress?.phase} · Etapa ${step?.n}. ${step?.short || '-'}`}{gs && gs !== 'pendente' ? ` · G${p.progress.phase}: ${GATE_STATUS[gs]?.label}` : ''}</span><b>{p.progress?.total ?? 0}%</b></div>
         <Progress value={p.progress?.total} />
       </div>
       <div className="meta"><AvatarStack users={p.members} /><span>Atualizado {new Date(p.updatedAt.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')}</span></div>
