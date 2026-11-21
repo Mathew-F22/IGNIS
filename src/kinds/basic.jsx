@@ -95,6 +95,7 @@ export const table = {
     const fixed = !!cfg.rows;
     return (
       <div className="stack">
+        {cfg.note && <div className="tip small">{cfg.note}</div>}
         {cfg.pre && <div className="grid-2">{cfg.pre.map((f) => <BText key={f.k} path={[...base, 'pre', f.k]} label={f.l} multiline rows={1} />)}</div>}
         <div className="k-table-wrap">
           <table className="k-table">

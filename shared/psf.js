@@ -166,7 +166,8 @@ export const STAGES = [
       { k: 'justificativa', l: 'Justificativa técnica e econômica', t: 'area', wide: true },
       { k: 'eliminatorios', l: 'Critérios eliminatórios aplicados', t: 'area' },
       { k: 'restricoes', l: 'Restrições (financeiras, técnicas, legais, prazo)', t: 'area' },
-      { k: 'desvantagens', l: 'Desvantagens assumidas', t: 'area', wide: true },
+      { k: 'vantagens', l: 'Prós: vantagens da solução (uma por linha)', t: 'area', wide: true },
+      { k: 'desvantagens', l: 'Contras: desvantagens assumidas (uma por linha)', t: 'area', wide: true },
     ],
     key: ['solucao', 'justificativa'],
     tools: ['Decision Matrix', 'Weighted Decision Matrix', 'Pugh Matrix', 'AHP - Analytic Hierarchy Process', 'TOPSIS', 'ELECTRE', 'Pairwise Comparison', 'Multivoting', 'Impact x Effort Matrix', 'Cost x Benefit Matrix', 'Feasibility Matrix', 'Risk x Return Matrix', 'MoSCoW', 'RICE Scoring', 'ICE Scoring', 'Delphi Method', 'Nominal Group Technique', 'Force Field Analysis', 'Decision Tree Analysis', 'Expected Monetary Value (EMV)', 'Critical Success Factors', 'Weighted Scoring Model', 'Opportunity Cost Analysis', 'Multi-Criteria Decision Analysis (MCDA)'],
@@ -281,6 +282,8 @@ export const STAGES = [
       { k: 'ganhoFinanceiro', l: 'Ganho financeiro real (R$/ano)', t: 'num' },
       { k: 'ganhos', l: 'Ganhos operacionais, de qualidade, segurança e ergonomia', t: 'area' },
       { k: 'desvios', l: 'Investimento e prazo: previsto x realizado', t: 'area' },
+      { k: 'funcionou', l: 'O que funcionou (uma por linha)', t: 'area' },
+      { k: 'naoFuncionou', l: 'O que não funcionou / faríamos diferente', t: 'area' },
       { k: 'licoes', l: 'Aprendizados', t: 'area', wide: true, ph: 'O que funcionou, o que não funcionou, hipóteses descartadas, competências desenvolvidas' },
       { k: 'replicacao', l: 'Potencial de replicação', t: 'area', wide: true, ph: 'Outros postos, linhas, unidades' },
     ],
@@ -310,6 +313,20 @@ export const STAGES = [
     rec: ['Executive Summary', 'One-Page Business Case', 'Go / No-Go Assessment'],
   },
 ];
+
+// Ferramentas clássicas da qualidade e do Lean usadas na fábrica, além das do material PSF.
+const EXTRA_TOOLS = {
+  'Matriz BASICO': ['s08', 's09', 's17'], 'Orçamento detalhado': ['s12', 's14', 's17'], 'Prós e contras': ['s09'], 'Matriz GUT': ['s02', 's03', 's06', 's13'], 'MASP': ['s03', 's06'], 'Kaizen (evento)': ['s11', 's14'],
+  'Lição Ponto a Ponto (LPP / OPL)': ['s15'], 'Mapa de Empatia': ['s02'], 'Análise 3M (Muda, Mura, Muri)': ['s04'], 'PDPC (Process Decision Program Chart)': ['s13', 's14'],
+  'Heijunka': ['s04', 's14'], 'Milk Run': ['s04', 's14'], 'Supermercado de peças': ['s14'], 'MTM (Methods-Time Measurement)': ['s04'], 'Lean Canvas': ['s02'],
+  'Jobs to be Done': ['s02'], 'Célula de manufatura': ['s10'], 'Diagrama de Árvore': ['s06', 's08'], 'Matriz de Priorização': ['s09'], 'Capabilidade (Cp / Cpk)': ['s05', 's16'],
+  'Boxplot': ['s05'], 'Diagrama de Setas (CPM)': ['s14'], 'Lead Time Analysis': ['s04'], '5W2H': ['s14'], 'SIPOC': ['s04'],
+};
+for (const [name, ids] of Object.entries(EXTRA_TOOLS)) for (const sid of ids) { const st = STAGES.find((x) => x.id === sid); if (!st.tools.includes(name)) st.tools.unshift(name); }
+STAGES.find((x) => x.id === 's09').rec.unshift('Matriz BASICO');
+STAGES.find((x) => x.id === 's03').rec.push('Matriz GUT');
+STAGES.find((x) => x.id === 's12').rec.unshift('Orçamento detalhado');
+
 
 export const STAGE = Object.fromEntries(STAGES.map((s) => [s.id, s]));
 
@@ -358,7 +375,7 @@ export const EXEC_SLIDES = [
   { n: 13, stage: 's12', title: 'Investimento e retorno', q: 'Quanto custa e quanto retorna?' },
   { n: 14, stage: 's14', title: 'Plano de implementação', q: 'Como, quando e por quem será executado?' },
   { n: 15, stage: 's15', title: 'Controle e sustentação', q: 'Como garantir a continuidade?' },
-  { n: 16, stage: 's16', title: 'Aprendizados e potencial de replicação', q: 'O que foi aprendido e onde mais se aplica?' },
+  { n: 16, stage: 's16', title: 'Resultados e aprendizados', q: 'O que entregamos, o que aprendemos e onde mais se aplica?' },
   { n: 17, stage: 's17', title: 'Decisão executiva', q: 'O que precisamos que seja aprovado?' },
 ];
 

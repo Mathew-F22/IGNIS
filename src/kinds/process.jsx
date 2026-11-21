@@ -78,7 +78,7 @@ function yamaModel(d) {
   const minOps = takt ? Math.ceil(total / takt) : null;
   return { takt, ops, total, max, bal, minOps };
 }
-const EL_COLOR = { VA: '#1F9D74', NNVA: '#E0A21F', NVA: '#E5484D' };
+const EL_COLOR = { VA: '#6B7A66', NNVA: '#D0B993', NVA: '#7D6363' };
 function YamaChart({ m, w = 760 }) {
   const h = 260, pad = { l: 44, r: 70, t: 12, b: 36 };
   const top = Math.max(m.max, m.takt || 0, 1) * 1.15;
@@ -86,18 +86,18 @@ function YamaChart({ m, w = 760 }) {
   const y = (v) => pad.t + H - (v / top) * H;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="chart">
-      {[0, 0.5, 1].map((f) => <g key={f}><line x1={pad.l} x2={pad.l + W} y1={y(top * f)} y2={y(top * f)} stroke="#EEF0F3" /><text x={pad.l - 6} y={y(top * f)} fontSize="11" fill="#6B7587" textAnchor="end" dominantBaseline="central">{fmt(top * f, 0)}</text></g>)}
+      {[0, 0.5, 1].map((f) => <g key={f}><line x1={pad.l} x2={pad.l + W} y1={y(top * f)} y2={y(top * f)} stroke="#EFEEF2" /><text x={pad.l - 6} y={y(top * f)} fontSize="11" fill="#787386" textAnchor="end" dominantBaseline="central">{fmt(top * f, 0)}</text></g>)}
       {m.ops.map((o, i) => {
         let acc = 0;
         return (
           <g key={o.id}>
-            {(o.els || []).map((e) => { const t = num(e.t) || 0; const y0 = y(acc + t), hh = (t / top) * H; acc += t; return <rect key={e.id} x={pad.l + i * bw + bw * 0.18} y={y0} width={bw * 0.64} height={Math.max(0, hh - 1)} fill={EL_COLOR[e.tipo] || '#2F6FED'} rx="2"><title>{e.text} · {t}s</title></rect>; })}
-            <text x={pad.l + i * bw + bw / 2} y={h - pad.b + 15} fontSize="11" textAnchor="middle" fill="#3D4758">{o.nome}</text>
-            <text x={pad.l + i * bw + bw / 2} y={y(o.t) - 5} fontSize="11" textAnchor="middle" fill="#011E41" fontWeight="600">{fmt(o.t, 0)}</text>
+            {(o.els || []).map((e) => { const t = num(e.t) || 0; const y0 = y(acc + t), hh = (t / top) * H; acc += t; return <rect key={e.id} x={pad.l + i * bw + bw * 0.18} y={y0} width={bw * 0.64} height={Math.max(0, hh - 1)} fill={EL_COLOR[e.tipo] || '#041E41'} rx="2"><title>{e.text} · {t}s</title></rect>; })}
+            <text x={pad.l + i * bw + bw / 2} y={h - pad.b + 15} fontSize="11" textAnchor="middle" fill="#4A4757">{o.nome}</text>
+            <text x={pad.l + i * bw + bw / 2} y={y(o.t) - 5} fontSize="11" textAnchor="middle" fill="#041E41" fontWeight="600">{fmt(o.t, 0)}</text>
           </g>
         );
       })}
-      {m.takt && <g><line x1={pad.l} x2={pad.l + W} y1={y(m.takt)} y2={y(m.takt)} stroke="#011E41" strokeWidth="2" strokeDasharray="7 4" /><text x={pad.l + W + 4} y={y(m.takt)} fontSize="11" fill="#011E41" fontWeight="700" dominantBaseline="central">Takt {fmt(m.takt)}</text></g>}
+      {m.takt && <g><line x1={pad.l} x2={pad.l + W} y1={y(m.takt)} y2={y(m.takt)} stroke="#041E41" strokeWidth="2" strokeDasharray="7 4" /><text x={pad.l + W + 4} y={y(m.takt)} fontSize="11" fill="#041E41" fontWeight="700" dominantBaseline="central">Takt {fmt(m.takt)}</text></g>}
     </svg>
   );
 }

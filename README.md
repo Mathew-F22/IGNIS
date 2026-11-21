@@ -14,7 +14,7 @@ Plataforma de gestão de ideias e resolução de problemas baseada no **Project 
 | 4 · Autorização | 12 Viabilidade · 13 Riscos · 14 Implementação · 17 Decisão | G4 · Projeto autorizado |
 | 5 · Resultados | 15 Controle · 16 Resultados | G5 · Resultado comprovado |
 
-- Cada etapa tem uma **ficha** (os campos do slide executivo) e uma **biblioteca de ferramentas** (todas as do material PSF, cerca de 385). O colaborador escolhe pelo menos uma por etapa; nenhuma é obrigatória.
+- Cada etapa tem uma **ficha** (os campos do slide executivo) e uma **biblioteca de ferramentas**: as do material PSF mais as clássicas da fábrica (Matriz BASICO, Matriz GUT, MASP, Kaizen, LPP/OPL, Heijunka, Milk Run, MTM, Prós e contras, Orçamento detalhado e outras), cerca de 400. A aba **Todas** deixa usar qualquer ferramenta em qualquer etapa. O colaborador escolhe pelo menos uma por etapa; nenhuma é obrigatória.
 - A biblioteca ajuda a escolher: recomendadas primeiro, a árvore "Qual é a necessidade?" e a matriz "Situação identificada".
 - 31 tipos de ferramenta são interativos: Ishikawa (6M, 8M, 4P), 5 Porquês, Pareto, histograma, carta de controle, capabilidade (Cp/Cpk), dispersão e regressão, teste t, DOE, fluxograma, Yamazumi, matriz de decisão ponderada, Pugh, AHP, VPL/TIR/payback, Monte Carlo, matriz de risco, FMEA, Gantt, RACI, PDCA, antes e depois e histórico de indicador EMS. As demais viram modelos estruturados para preencher.
 - Uma fase só abre quando o Gate anterior é **aprovado**. O time pede a avaliação; o gestor aprova, pede ajustes, coloca em espera ou rejeita, com comentário e histórico.
@@ -38,7 +38,7 @@ Na apresentação, cada indicador ganha um slide de histórico e o time escolhe 
 
 ## Apresentação e A4
 
-- **Slides**: sequência executiva de 17 slides (identificação, resumo, contexto, problema, diagnóstico, causa raiz, metas, alternativas, solução, protótipo, testes, riscos, investimento, implementação, controle, resultados, decisão), mais os slides de indicador e o **dossiê técnico** com os anexos A a H. Dá para ocultar slides, escolher a evidência de destaque de cada etapa (estrela), apresentar em tela cheia e exportar em PDF ou PowerPoint (no PowerPoint cada slide vai como imagem em alta resolução, com as anotações do apresentador).
+- **Slides**: roteiro de venda pré-definido seguindo as 5 fases do PSF: capa, resumo executivo, roteiro, contexto, problema, diagnóstico, causa raiz, metas, alternativas, solução, **prós e contras** (com comparação das alternativas e como os contras são tratados), protótipo, testes, riscos, **orçamento** (itens, categorias, CAPEX e OPEX), investimento e retorno, implementação, controle, **resultados e aprendizados** (o que funcionou, o que não funcionou, onde replicar), slides de indicador e decisão executiva, mais o **dossiê técnico** com os anexos A a H. Visual na paleta e tipografia Electrolux (Electrolux Sans; Inter quando a fonte não está instalada). Dá para ocultar slides, escolher a evidência de destaque de cada etapa (estrela), apresentar em tela cheia e exportar em PDF ou PowerPoint (no PowerPoint cada slide vai como imagem em alta resolução, com as anotações do apresentador).
 - **A4**: resumo executivo de uma página e uma folha por etapa com conteúdo. Também imprime uma etapa ou uma ferramenta isolada.
 
 ## Funcionalidades

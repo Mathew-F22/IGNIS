@@ -37,7 +37,7 @@ export function BText({ path, multiline, placeholder, rows = 3, className = '', 
   const props = {
     ref, value: draft, placeholder,
     className: `input ${others.length ? 'is-shared' : ''} ${className}`,
-    style: others.length ? { '--peer': '#2F6FED' } : undefined,
+    style: others.length ? { '--peer': '#041E41' } : undefined,
     onFocus: () => { focused.current = true; ctx.focus(key); },
     onBlur: () => { focused.current = false; push.flush(draft); ctx.focus(null); },
     onChange: (e) => { setDraft(e.target.value); push(e.target.value); },

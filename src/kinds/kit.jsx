@@ -113,7 +113,7 @@ export const KV = ({ items, cols = 3 }) => (
 export const Txt = ({ k, v }) => has(v) ? <div className="tv-txt">{k && <span>{k}</span>}<p>{v}</p></div> : null;
 export const ImgRow = ({ images }) => (images || []).length ? <div className="tv-imgs">{images.map((i) => <img key={i.id} src={i.src} alt="" />)}</div> : null;
 
-export function Bars({ data, unit = '', height = 220, cumulative, refLine, refLabel, color = '#2F6FED', width = 760, labelEvery = 1 }) {
+export function Bars({ data, unit = '', height = 220, cumulative, refLine, refLabel, color = '#041E41', width = 760, labelEvery = 1 }) {
   const pad = { l: 46, r: cumulative ? 40 : 14, t: 14, b: 44 };
   const max = Math.max(1, ...data.map((d) => d.v), refLine || 0);
   const W = width - pad.l - pad.r, H = height - pad.t - pad.b;
@@ -123,27 +123,27 @@ export function Bars({ data, unit = '', height = 220, cumulative, refLine, refLa
   const cum = data.map((d) => { acc += d.v; return (acc / total) * 100; });
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img">
-      {[0, 0.25, 0.5, 0.75, 1].map((f) => <g key={f}><line x1={pad.l} x2={width - pad.r} y1={pad.t + H * (1 - f)} y2={pad.t + H * (1 - f)} stroke="#EEF0F3" /><text x={pad.l - 6} y={pad.t + H * (1 - f)} fontSize="11" fill="#6B7587" textAnchor="end" dominantBaseline="central">{fmt(max * f, 0)}</text></g>)}
+      {[0, 0.25, 0.5, 0.75, 1].map((f) => <g key={f}><line x1={pad.l} x2={width - pad.r} y1={pad.t + H * (1 - f)} y2={pad.t + H * (1 - f)} stroke="#EFEEF2" /><text x={pad.l - 6} y={pad.t + H * (1 - f)} fontSize="11" fill="#787386" textAnchor="end" dominantBaseline="central">{fmt(max * f, 0)}</text></g>)}
       {data.map((d, i) => {
         const h = (d.v / max) * H;
         return (
           <g key={i}>
-            <rect x={pad.l + i * bw + bw * 0.14} y={pad.t + H - h} width={bw * 0.72} height={Math.max(0, h)} rx="4" fill={d.color || (cumulative && cum[i - 1] >= 80 ? '#B8C6DC' : color)} />
-            {i % labelEvery === 0 && <text x={pad.l + i * bw + bw / 2} y={height - pad.b + 16} fontSize="11" fill="#3D4758" textAnchor="middle">{String(d.l).slice(0, 14)}</text>}
-            {d.top && <text x={pad.l + i * bw + bw / 2} y={pad.t + H - h - 5} fontSize="11" fill="#011E41" fontWeight="600" textAnchor="middle">{d.top}</text>}
+            <rect x={pad.l + i * bw + bw * 0.14} y={pad.t + H - h} width={bw * 0.72} height={Math.max(0, h)} rx="4" fill={d.color || (cumulative && cum[i - 1] >= 80 ? '#ACB9C1' : color)} />
+            {i % labelEvery === 0 && <text x={pad.l + i * bw + bw / 2} y={height - pad.b + 16} fontSize="11" fill="#4A4757" textAnchor="middle">{String(d.l).slice(0, 14)}</text>}
+            {d.top && <text x={pad.l + i * bw + bw / 2} y={pad.t + H - h - 5} fontSize="11" fill="#041E41" fontWeight="600" textAnchor="middle">{d.top}</text>}
           </g>
         );
       })}
-      {refLine != null && <g><line x1={pad.l} x2={width - pad.r} y1={pad.t + H - (refLine / max) * H} y2={pad.t + H - (refLine / max) * H} stroke="#E5484D" strokeWidth="2" strokeDasharray="6 4" /><text x={width - pad.r} y={pad.t + H - (refLine / max) * H - 6} fontSize="11" fill="#E5484D" fontWeight="600" textAnchor="end">{refLabel}</text></g>}
+      {refLine != null && <g><line x1={pad.l} x2={width - pad.r} y1={pad.t + H - (refLine / max) * H} y2={pad.t + H - (refLine / max) * H} stroke="#7D6363" strokeWidth="2" strokeDasharray="6 4" /><text x={width - pad.r} y={pad.t + H - (refLine / max) * H - 6} fontSize="11" fill="#7D6363" fontWeight="600" textAnchor="end">{refLabel}</text></g>}
       {cumulative && (
         <g>
-          <polyline fill="none" stroke="#FF6A2B" strokeWidth="2.5" points={cum.map((c, i) => `${pad.l + i * bw + bw / 2},${pad.t + H - (c / 100) * H}`).join(' ')} />
-          {cum.map((c, i) => <circle key={i} cx={pad.l + i * bw + bw / 2} cy={pad.t + H - (c / 100) * H} r="3.5" fill="#fff" stroke="#FF6A2B" strokeWidth="2" />)}
-          <line x1={pad.l} x2={width - pad.r} y1={pad.t + H * 0.2} y2={pad.t + H * 0.2} stroke="#FF6A2B" strokeOpacity=".35" strokeDasharray="3 4" />
-          <text x={width - pad.r + 4} y={pad.t + H * 0.2} fontSize="11" fill="#FF6A2B" dominantBaseline="central">80%</text>
+          <polyline fill="none" stroke="#937359" strokeWidth="2.5" points={cum.map((c, i) => `${pad.l + i * bw + bw / 2},${pad.t + H - (c / 100) * H}`).join(' ')} />
+          {cum.map((c, i) => <circle key={i} cx={pad.l + i * bw + bw / 2} cy={pad.t + H - (c / 100) * H} r="3.5" fill="#fff" stroke="#937359" strokeWidth="2" />)}
+          <line x1={pad.l} x2={width - pad.r} y1={pad.t + H * 0.2} y2={pad.t + H * 0.2} stroke="#937359" strokeOpacity=".35" strokeDasharray="3 4" />
+          <text x={width - pad.r + 4} y={pad.t + H * 0.2} fontSize="11" fill="#937359" dominantBaseline="central">80%</text>
         </g>
       )}
-      {unit && <text x={pad.l} y={10} fontSize="10" fill="#6B7587">{unit}</text>}
+      {unit && <text x={pad.l} y={10} fontSize="10" fill="#787386">{unit}</text>}
     </svg>
   );
 }
@@ -152,7 +152,7 @@ export function Bars({ data, unit = '', height = 220, cumulative, refLine, refLa
 export function Series({ values, lines = [], width = 760, height = 240, labels, marker, markerLabel = 'Implementação' }) {
   const pad = { l: 46, r: 70, t: 14, b: 28 };
   const all = [...values, ...lines.map((l) => l.v)].filter((v) => v != null && Number.isFinite(v));
-  if (!all.length) return <svg viewBox={`0 0 ${width} ${height}`} className="chart"><text x={width / 2} y={height / 2} textAnchor="middle" fill="#98A1B2" fontSize="13">Sem dados ainda</text></svg>;
+  if (!all.length) return <svg viewBox={`0 0 ${width} ${height}`} className="chart"><text x={width / 2} y={height / 2} textAnchor="middle" fill="#AFAAB9" fontSize="13">Sem dados ainda</text></svg>;
   let min = Math.min(...all), max = Math.max(...all);
   if (min === max) { min -= 1; max += 1; }
   const sp = max - min; min -= sp * 0.1; max += sp * 0.1;
@@ -162,12 +162,12 @@ export function Series({ values, lines = [], width = 760, height = 240, labels, 
   const out = (v) => lines.some((l) => l.limit === 'hi' && v > l.v) || lines.some((l) => l.limit === 'lo' && v < l.v);
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img">
-      {[0, 0.25, 0.5, 0.75, 1].map((f) => { const v = min + (max - min) * f; return <g key={f}><line x1={pad.l} x2={pad.l + W} y1={y(v)} y2={y(v)} stroke="#EEF0F3" /><text x={pad.l - 6} y={y(v)} fontSize="11" fill="#6B7587" textAnchor="end" dominantBaseline="central">{fmt(v)}</text></g>; })}
+      {[0, 0.25, 0.5, 0.75, 1].map((f) => { const v = min + (max - min) * f; return <g key={f}><line x1={pad.l} x2={pad.l + W} y1={y(v)} y2={y(v)} stroke="#EFEEF2" /><text x={pad.l - 6} y={y(v)} fontSize="11" fill="#787386" textAnchor="end" dominantBaseline="central">{fmt(v)}</text></g>; })}
       {lines.map((l, i) => <g key={i}><line x1={pad.l} x2={pad.l + W} y1={y(l.v)} y2={y(l.v)} stroke={l.color} strokeWidth="1.6" strokeDasharray={l.dash || '6 4'} /><text x={pad.l + W + 4} y={y(l.v)} fontSize="10.5" fill={l.color} dominantBaseline="central" fontWeight="600">{l.label} {fmt(l.v)}</text></g>)}
-      {marker != null && marker >= 0 && marker < values.length && <g><line x1={x(marker) - (values.length > 1 ? W / (values.length - 1) / 2 : 0)} x2={x(marker) - (values.length > 1 ? W / (values.length - 1) / 2 : 0)} y1={pad.t} y2={pad.t + H} stroke="#FF6A2B" strokeWidth="2" strokeDasharray="4 4" /><text x={x(marker) - (values.length > 1 ? W / (values.length - 1) / 2 : 0) + 5} y={pad.t + 10} fontSize="10.5" fill="#FF6A2B" fontWeight="600">{markerLabel}</text></g>}
-      <polyline fill="none" stroke="#2F6FED" strokeWidth="2.5" strokeLinejoin="round" points={values.map((v, i) => v == null ? null : `${x(i)},${y(v)}`).filter(Boolean).join(' ')} />
-      {values.map((v, i) => v != null && <circle key={i} cx={x(i)} cy={y(v)} r="3.6" fill={out(v) ? '#E5484D' : '#fff'} stroke={out(v) ? '#E5484D' : '#2F6FED'} strokeWidth="2" />)}
-      {labels && values.map((_, i) => (values.length <= 16 || i % Math.ceil(values.length / 16) === 0) && <text key={i} x={x(i)} y={height - 8} fontSize="10.5" fill="#6B7587" textAnchor="middle">{labels[i] ?? i + 1}</text>)}
+      {marker != null && marker >= 0 && marker < values.length && <g><line x1={x(marker) - (values.length > 1 ? W / (values.length - 1) / 2 : 0)} x2={x(marker) - (values.length > 1 ? W / (values.length - 1) / 2 : 0)} y1={pad.t} y2={pad.t + H} stroke="#937359" strokeWidth="2" strokeDasharray="4 4" /><text x={x(marker) - (values.length > 1 ? W / (values.length - 1) / 2 : 0) + 5} y={pad.t + 10} fontSize="10.5" fill="#937359" fontWeight="600">{markerLabel}</text></g>}
+      <polyline fill="none" stroke="#041E41" strokeWidth="2.5" strokeLinejoin="round" points={values.map((v, i) => v == null ? null : `${x(i)},${y(v)}`).filter(Boolean).join(' ')} />
+      {values.map((v, i) => v != null && <circle key={i} cx={x(i)} cy={y(v)} r="3.6" fill={out(v) ? '#7D6363' : '#fff'} stroke={out(v) ? '#7D6363' : '#041E41'} strokeWidth="2" />)}
+      {labels && values.map((_, i) => (values.length <= 16 || i % Math.ceil(values.length / 16) === 0) && <text key={i} x={x(i)} y={height - 8} fontSize="10.5" fill="#787386" textAnchor="middle">{labels[i] ?? i + 1}</text>)}
     </svg>
   );
 }

@@ -45,7 +45,7 @@ function Bones({ cols }) {
   return (
     <div className="fish-spine" ref={ref}>
       <svg width={w} height={h} aria-hidden="true" style={{ display: 'block', overflow: 'visible' }}>
-        <line x1={0} y1={mid} x2={w + 18} y2={mid} stroke="#011E41" strokeWidth="3" strokeLinecap="round" />
+        <line x1={0} y1={mid} x2={w + 18} y2={mid} stroke="#041E41" strokeWidth="3" strokeLinecap="round" />
         {Array.from({ length: cols }, (_, i) => { const x = i * (colW + gap) + colW * 0.45, tx = x + colW * 0.4; return <g key={i} stroke="#9fb0c8" strokeWidth="2" strokeLinecap="round"><line x1={x} y1={0} x2={tx} y2={mid} /><line x1={x} y1={h} x2={tx} y2={mid} /></g>; })}
       </svg>
     </div>
@@ -210,7 +210,7 @@ function histBins(v, lsl, usl) {
   const lo = st.min, hi = st.max === st.min ? st.min + 1 : st.max, w = (hi - lo) / k;
   const bins = Array.from({ length: k }, (_, i) => ({ a: lo + i * w, b: lo + (i + 1) * w, v: 0 }));
   v.forEach((x) => { const i = Math.min(k - 1, Math.floor((x - lo) / w)); bins[i].v++; });
-  return bins.map((b) => ({ l: fmt((b.a + b.b) / 2), v: b.v, color: (lsl != null && b.b < lsl) || (usl != null && b.a > usl) ? '#E5484D' : undefined }));
+  return bins.map((b) => ({ l: fmt((b.a + b.b) / 2), v: b.v, color: (lsl != null && b.b < lsl) || (usl != null && b.a > usl) ? '#7D6363' : undefined }));
 }
 function SeriesView({ d, mode, w = 760 }) {
   const m = seriesModel(d, mode);
@@ -218,10 +218,10 @@ function SeriesView({ d, mode, w = 760 }) {
   const u = d.unidade ? ` ${d.unidade}` : '';
   const basic = [['n', String(m.st.n)], ['Média', fmt(m.st.mean, 2) + u], ['Mediana', fmt(m.st.median, 2) + u], ['Desvio-padrão', fmt(m.st.sd, 3)], ['Mín · Máx', `${fmt(m.st.min, 2)} · ${fmt(m.st.max, 2)}`], ['Amplitude', fmt(m.st.range, 2)]];
   const lines = [];
-  if (mode === 'control') lines.push({ v: m.ucl, label: 'LSC', color: '#E5484D', limit: 'hi' }, { v: m.st.mean, label: 'Média', color: '#011E41', dash: '2 0' }, { v: m.lcl, label: 'LIC', color: '#E5484D', limit: 'lo' });
-  else if (mode === 'run') lines.push({ v: m.st.median, label: 'Mediana', color: '#011E41', dash: '2 0' });
-  if (m.alvo != null) lines.push({ v: m.alvo, label: 'Meta', color: '#1F9D74' });
-  if (mode === 'capability') { if (m.lsl != null) lines.push({ v: m.lsl, label: 'LIE', color: '#E5484D', limit: 'lo' }); if (m.usl != null) lines.push({ v: m.usl, label: 'LSE', color: '#E5484D', limit: 'hi' }); }
+  if (mode === 'control') lines.push({ v: m.ucl, label: 'LSC', color: '#7D6363', limit: 'hi' }, { v: m.st.mean, label: 'Média', color: '#041E41', dash: '2 0' }, { v: m.lcl, label: 'LIC', color: '#7D6363', limit: 'lo' });
+  else if (mode === 'run') lines.push({ v: m.st.median, label: 'Mediana', color: '#041E41', dash: '2 0' });
+  if (m.alvo != null) lines.push({ v: m.alvo, label: 'Meta', color: '#6B7A66' });
+  if (mode === 'capability') { if (m.lsl != null) lines.push({ v: m.lsl, label: 'LIE', color: '#7D6363', limit: 'lo' }); if (m.usl != null) lines.push({ v: m.usl, label: 'LSE', color: '#7D6363', limit: 'hi' }); }
   return (
     <div className="tv-stack">
       {mode === 'hist' || mode === 'capability' ? <Bars data={histBins(m.v, m.lsl, m.usl)} width={w} height={220} />
@@ -242,12 +242,12 @@ function BoxPlot({ st, w }) {
   const x = (v) => pad + ((v - lo) / (hi - lo)) * (w - pad * 2);
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="chart">
-      <line x1={x(st.min)} x2={x(st.max)} y1={56} y2={56} stroke="#98A1B2" strokeWidth="2" />
-      <rect x={x(st.q1)} y={30} width={Math.max(2, x(st.q3) - x(st.q1))} height={52} rx="6" fill="#E8EFFD" stroke="#2F6FED" strokeWidth="2" />
-      <line x1={x(st.median)} x2={x(st.median)} y1={30} y2={82} stroke="#011E41" strokeWidth="3" />
-      {[st.min, st.max].map((v, i) => <line key={i} x1={x(v)} x2={x(v)} y1={42} y2={70} stroke="#98A1B2" strokeWidth="2" />)}
-      <circle cx={x(st.mean)} cy={56} r="5" fill="#FF6A2B" />
-      {[['Mín', st.min], ['Q1', st.q1], ['Mediana', st.median], ['Q3', st.q3], ['Máx', st.max]].map(([l, v]) => <text key={l} x={x(v)} y={104} fontSize="11" fill="#3D4758" textAnchor="middle">{l} {fmt(v, 2)}</text>)}
+      <line x1={x(st.min)} x2={x(st.max)} y1={56} y2={56} stroke="#AFAAB9" strokeWidth="2" />
+      <rect x={x(st.q1)} y={30} width={Math.max(2, x(st.q3) - x(st.q1))} height={52} rx="6" fill="#E6EDEF" stroke="#041E41" strokeWidth="2" />
+      <line x1={x(st.median)} x2={x(st.median)} y1={30} y2={82} stroke="#041E41" strokeWidth="3" />
+      {[st.min, st.max].map((v, i) => <line key={i} x1={x(v)} x2={x(v)} y1={42} y2={70} stroke="#AFAAB9" strokeWidth="2" />)}
+      <circle cx={x(st.mean)} cy={56} r="5" fill="#937359" />
+      {[['Mín', st.min], ['Q1', st.q1], ['Mediana', st.median], ['Q3', st.q3], ['Máx', st.max]].map(([l, v]) => <text key={l} x={x(v)} y={104} fontSize="11" fill="#4A4757" textAnchor="middle">{l} {fmt(v, 2)}</text>)}
     </svg>
   );
 }
@@ -286,13 +286,13 @@ function ScatterView({ d, w = 760 }) {
   return (
     <div className="tv-stack">
       <svg viewBox={`0 0 ${w} ${h}`} className="chart">
-        <line x1={pad.l} x2={w - pad.r} y1={h - pad.b} y2={h - pad.b} stroke="#D6DAE1" /><line x1={pad.l} x2={pad.l} y1={pad.t} y2={h - pad.b} stroke="#D6DAE1" />
-        <text x={w / 2} y={h - 6} fontSize="11" fill="#6B7587" textAnchor="middle">{d.xl}</text>
-        <text x={14} y={h / 2} fontSize="11" fill="#6B7587" textAnchor="middle" transform={`rotate(-90 14 ${h / 2})`}>{d.yl}</text>
-        {[x0, x1].map((v, i) => <text key={i} x={X(v)} y={h - pad.b + 14} fontSize="10.5" fill="#6B7587" textAnchor="middle">{fmt(v)}</text>)}
-        {[y0, y1].map((v, i) => <text key={i} x={pad.l - 6} y={Y(v)} fontSize="10.5" fill="#6B7587" textAnchor="end" dominantBaseline="central">{fmt(v)}</text>)}
-        {r && <line x1={X(x0)} x2={X(x1)} y1={Y(r.a + r.b * x0)} y2={Y(r.a + r.b * x1)} stroke="#FF6A2B" strokeWidth="2.5" />}
-        {pts.map((p, i) => <circle key={i} cx={X(p[0])} cy={Y(p[1])} r="4.5" fill="#2F6FED" fillOpacity=".75" />)}
+        <line x1={pad.l} x2={w - pad.r} y1={h - pad.b} y2={h - pad.b} stroke="#D8D5DD" /><line x1={pad.l} x2={pad.l} y1={pad.t} y2={h - pad.b} stroke="#D8D5DD" />
+        <text x={w / 2} y={h - 6} fontSize="11" fill="#787386" textAnchor="middle">{d.xl}</text>
+        <text x={14} y={h / 2} fontSize="11" fill="#787386" textAnchor="middle" transform={`rotate(-90 14 ${h / 2})`}>{d.yl}</text>
+        {[x0, x1].map((v, i) => <text key={i} x={X(v)} y={h - pad.b + 14} fontSize="10.5" fill="#787386" textAnchor="middle">{fmt(v)}</text>)}
+        {[y0, y1].map((v, i) => <text key={i} x={pad.l - 6} y={Y(v)} fontSize="10.5" fill="#787386" textAnchor="end" dominantBaseline="central">{fmt(v)}</text>)}
+        {r && <line x1={X(x0)} x2={X(x1)} y1={Y(r.a + r.b * x0)} y2={Y(r.a + r.b * x1)} stroke="#937359" strokeWidth="2.5" />}
+        {pts.map((p, i) => <circle key={i} cx={X(p[0])} cy={Y(p[1])} r="4.5" fill="#041E41" fillOpacity=".75" />)}
       </svg>
       {r && <KV cols={4} items={[['Correlação (r)', fmt(r.r, 3), Math.abs(r.r) >= 0.7 ? 'blue' : ''], ['R²', `${fmt(r.r2 * 100, 1)}%`], ['Equação', `Y = ${fmt(r.a, 3)} ${r.b >= 0 ? '+' : '−'} ${fmt(Math.abs(r.b), 3)}·X`], ['Leitura', `Relação ${strength} ${r.r >= 0 ? 'positiva' : 'negativa'}`]]} />}
       <Txt v={d.conclusao} />
@@ -326,7 +326,7 @@ function CompareView({ d, w = 760 }) {
   const sig = r?.p != null && r.p < 0.05;
   return (
     <div className="tv-stack">
-      <Bars width={w} height={180} data={[{ l: d.la || 'A', v: A.mean, top: fmt(A.mean, 2), color: '#98A1B2' }, { l: d.lb || 'B', v: B.mean, top: fmt(B.mean, 2), color: better ? '#1F9D74' : '#E5484D' }]} unit={d.unidade} />
+      <Bars width={w} height={180} data={[{ l: d.la || 'A', v: A.mean, top: fmt(A.mean, 2), color: '#AFAAB9' }, { l: d.lb || 'B', v: B.mean, top: fmt(B.mean, 2), color: better ? '#6B7A66' : '#7D6363' }]} unit={d.unidade} />
       <KV cols={4} items={[[`Média ${d.la || 'A'}`, `${fmt(A.mean, 2)} (n=${A.n})`], [`Média ${d.lb || 'B'}`, `${fmt(B.mean, 2)} (n=${B.n})`], ['Variação', delta != null ? `${delta > 0 ? '+' : ''}${fmt(delta, 1)}%` : '–', better ? 'green' : 'red'], ['p-valor (t de Welch)', r?.p != null ? (r.p < 0.001 ? '< 0,001' : fmt(r.p, 3)) : '–', sig ? 'blue' : '']]} />
       <p className="tv-note">{r?.p == null ? 'São necessários pelo menos 2 valores em cada grupo.' : sig ? `A diferença é estatisticamente significativa (p < 0,05) e ${better ? 'favorável' : 'desfavorável'} à mudança.` : 'Não há evidência estatística de diferença (p ≥ 0,05). Aumente a amostra ou revise a solução.'}</p>
       <Txt v={d.conclusao} />
@@ -393,7 +393,7 @@ function DoeEffects({ m }) {
   const valid = m.effects.filter((e) => e.e != null);
   if (!valid.length) return null;
   const top = [...valid].sort((a, b) => Math.abs(b.e) - Math.abs(a.e))[0];
-  return <div className="stack tight"><Bars width={600} height={170} data={valid.map((e) => ({ l: e.nome, v: Math.abs(e.e), top: `${e.e > 0 ? '+' : '−'}${fmt(Math.abs(e.e), 2)}`, color: e === top ? '#FF6A2B' : '#2F6FED' }))} /><KV cols={2} items={[['Fator dominante', top.nome, 'ember'], ['Efeito principal', `${top.e > 0 ? '+' : '−'}${fmt(Math.abs(top.e), 2)} ao passar de − para +`]]} /></div>;
+  return <div className="stack tight"><Bars width={600} height={170} data={valid.map((e) => ({ l: e.nome, v: Math.abs(e.e), top: `${e.e > 0 ? '+' : '−'}${fmt(Math.abs(e.e), 2)}`, color: e === top ? '#937359' : '#041E41' }))} /><KV cols={2} items={[['Fator dominante', top.nome, 'ember'], ['Efeito principal', `${top.e > 0 ? '+' : '−'}${fmt(Math.abs(top.e), 2)} ao passar de − para +`]]} /></div>;
 }
 
 // ---------- relações entre fatores ----------

@@ -41,7 +41,7 @@ function FinanceView({ d, cfg = {} }) {
       <KV cols={4} items={[['Investimento inicial', money(m.capex)], ['Custo recorrente', `${money(m.opex)}/mês`], ['Economia bruta', `${money(m.eco)}/mês`], ['Economia líquida', `${money(m.net)}/mês`, m.net > 0 ? 'green' : 'red']]} />
       <KV cols={4} items={[['Economia líquida anual', money(m.anual), 'blue'], ['Payback simples', m.payback != null ? months(m.payback) : 'não retorna', m.payback != null && m.payback <= 12 ? 'green' : ''], ['ROI no horizonte', m.roi != null ? `${fmt(m.roi, 0)}%` : '–'], ['VPL', money(m.npv), m.npv >= 0 ? 'green' : 'red']]} />
       <KV cols={4} items={[['TIR (ao ano)', irrPct(m.irr)], ['Payback descontado', m.pbd != null ? `${m.pbd} meses` : `> ${m.N} meses`], ['Benefício/custo (BCR)', m.bcr != null ? fmt(m.bcr, 2) : '–'], ['Horizonte · taxa', `${m.N} meses · ${num(d.taxa) ?? 12}% a.a.`]]} />
-      <Series values={m.cum} lines={[{ v: 0, label: 'Zero', color: '#98A1B2' }]} height={200} labels={m.cum.map((_, i) => (i % 6 === 0 ? `M${i}` : ''))} />
+      <Series values={m.cum} lines={[{ v: 0, label: 'Zero', color: '#AFAAB9' }]} height={200} labels={m.cum.map((_, i) => (i % 6 === 0 ? `M${i}` : ''))} />
       {cfg.focus === 'sensitivity' || cfg.showSens !== false ? (
         <table className="tv-table"><thead><tr><th>Economia realizada</th><th>Economia líquida/mês</th><th>Payback</th><th>VPL</th></tr></thead>
           <tbody>{sens.map((s) => <tr key={s.f} className={s.f === 1 ? 'hl' : ''}><td>{fmt(s.f * 100, 0)}% do previsto</td><td className="n">{money(s.net)}</td><td className="n">{months(s.payback, true)}</td><td className={`n ${s.npv < 0 ? 'bad' : ''}`}>{money(s.npv)}</td></tr>)}</tbody></table>
@@ -90,7 +90,7 @@ function mcModel(d) {
   const npvs = runs.map((x) => x.npv).sort((a, b) => a - b), pbs = runs.map((x) => x.pb).sort((a, b) => a - b);
   const q = (a, p) => a[Math.floor(p * (a.length - 1))];
   const lo = npvs[0], hi = npvs[npvs.length - 1], k = 16, w = (hi - lo) / k || 1;
-  const bins = Array.from({ length: k }, (_, i) => ({ l: fmt((lo + w * (i + 0.5)) / 1000, 0) + 'k', v: 0, color: lo + w * (i + 1) <= 0 ? '#E5484D' : '#2F6FED' }));
+  const bins = Array.from({ length: k }, (_, i) => ({ l: fmt((lo + w * (i + 0.5)) / 1000, 0) + 'k', v: 0, color: lo + w * (i + 1) <= 0 ? '#7D6363' : '#041E41' }));
   npvs.forEach((v) => { bins[Math.min(k - 1, Math.floor((v - lo) / w))].v++; });
   return { p10: q(npvs, 0.1), p50: q(npvs, 0.5), p90: q(npvs, 0.9), pb50: q(pbs, 0.5), pb90: q(pbs, 0.9), probPos: npvs.filter((v) => v > 0).length / npvs.length, bins };
 }
@@ -313,7 +313,7 @@ function BAView({ d }) {
   return (
     <div className="tv-stack">
       <KV cols={4} items={[['Antes (baseline)', m.base != null ? fmt(m.base, 2) + u : '–'], ['Depois (média recente)', m.avg != null ? fmt(m.avg, 2) + u : '–', 'blue'], ['Variação', m.delta != null ? `${m.delta > 0 ? '+' : ''}${fmt(m.delta, 1)}%` : '–', m.hit ? 'green' : ''], ['Meta', m.meta != null ? `${fmt(m.meta, 2)}${u} · ${m.hit == null ? '' : m.hit ? 'atingida' : 'não atingida'}` : '–', m.hit === false ? 'red' : m.hit ? 'green' : '']]} />
-      {m.n > 0 && <Series values={m.vals} labels={(d.med || []).map((x) => x.label)} lines={[m.base != null && { v: m.base, label: 'Antes', color: '#98A1B2' }, m.meta != null && { v: m.meta, label: 'Meta', color: '#1F9D74' }].filter(Boolean)} height={210} />}
+      {m.n > 0 && <Series values={m.vals} labels={(d.med || []).map((x) => x.label)} lines={[m.base != null && { v: m.base, label: 'Antes', color: '#AFAAB9' }, m.meta != null && { v: m.meta, label: 'Meta', color: '#6B7A66' }].filter(Boolean)} height={210} />}
       {((d.fotosAntes || []).length > 0 || (d.fotosDepois || []).length > 0) && <div className="tv-g2"><div><span className="tv-cap">Antes</span><ImgRow images={d.fotosAntes} /></div><div><span className="tv-cap">Depois</span><ImgRow images={d.fotosDepois} /></div></div>}
       <Txt v={d.obs} />
     </div>
@@ -360,7 +360,7 @@ function KpiView({ d, opts = {} }) {
   const m = kpiModel(d, opts.range);
   const u = m.k.unit ? ` ${m.k.unit}` : '';
   const pillar = PILLARS.find((p) => p.id === m.k.pillar);
-  const lines = [m.meta != null && { v: m.meta, label: 'Meta', color: '#1F9D74' }, m.marco != null && m.vBefore != null && { v: m.vBefore, label: 'Antes', color: '#98A1B2' }].filter(Boolean);
+  const lines = [m.meta != null && { v: m.meta, label: 'Meta', color: '#6B7A66' }, m.marco != null && m.vBefore != null && { v: m.vBefore, label: 'Antes', color: '#AFAAB9' }].filter(Boolean);
   const markerIdx = m.marco != null ? m.rows.findIndex((r) => r.i === m.marco) : null;
   return (
     <div className="tv-stack">

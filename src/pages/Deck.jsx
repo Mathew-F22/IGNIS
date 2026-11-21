@@ -81,7 +81,7 @@ function DeckInner() {
           <div className="row">
             <Link to={`/projeto/${meta.id}`} className="btn secondary sm"><ArrowLeft size={15} />Voltar ao projeto</Link>
             <b style={{ fontWeight: 600 }}>{meta.title}</b>
-            <span className="small" style={{ color: '#9aa7bb' }}>{total} slides · só o que foi preenchido</span>
+            <span className="small" style={{ color: '#ACB9C1' }}>{total} slides · só o que foi preenchido</span>
           </div>
           <div className="row">
             <button className="btn secondary sm" onClick={printPdf}><Printer size={15} />PDF</button>

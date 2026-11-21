@@ -1,9 +1,9 @@
 // Biblioteca de ferramentas da etapa + assistente (árvore de decisão e matriz de seleção).
 import { useMemo, useState } from 'react';
-import { Check, Compass, Plus, Search, Sparkles } from 'lucide-react';
+import { Check, Compass, Library as LibIcon, Plus, Search, Sparkles } from 'lucide-react';
 import { Modal, toast } from './ui.jsx';
 import { useProject } from '../lib/project.jsx';
-import { STAGE, DECISION_TREE, SELECTION_MATRIX, slug } from '../../shared/psf.js';
+import { STAGE, STAGES, DECISION_TREE, SELECTION_MATRIX, slug } from '../../shared/psf.js';
 import { CATALOG, stageTools } from '../../shared/tools.js';
 import { initData } from '../../shared/kinds.js';
 
@@ -46,6 +46,11 @@ export default function Library({ sid, onClose, onAdded, status, initialTab = 'e
     const f = all.filter((d) => !q || d.name.toLowerCase().includes(q.toLowerCase()) || (d.desc || '').toLowerCase().includes(q.toLowerCase()));
     return [...f.filter((d) => recIds.has(d.id)), ...f.filter((d) => !recIds.has(d.id) && d.interactive), ...f.filter((d) => !recIds.has(d.id) && !d.interactive)];
   }, [sid, q]);
+  const homeOf = useMemo(() => { const h = {}; for (const x of STAGES) for (const n of x.tools) (h[slug(n)] ||= []).push(x.n); return h; }, []);
+  const allList = useMemo(() => {
+    const t = q.toLowerCase();
+    return Object.values(CATALOG).filter((d) => !t || d.name.toLowerCase().includes(t) || (d.desc || '').toLowerCase().includes(t)).sort((a, b) => (b.interactive - a.interactive) || a.name.localeCompare(b.name));
+  }, [q]);
   const doAdd = (s, id) => { const it = add(s, id); if (it) onAdded?.(s, it); };
   const locked = (s) => status.stages[s]?.locked;
 
@@ -55,10 +60,11 @@ export default function Library({ sid, onClose, onAdded, status, initialTab = 'e
   });
 
   return (
-    <Modal wide title={tab === 'etapa' ? `Ferramentas da etapa ${st.n} · ${st.short}` : 'Assistente: qual ferramenta usar?'} onClose={onClose} footer={<button className="btn" onClick={onClose}>Concluir</button>}>
+    <Modal wide title={tab === 'etapa' ? `Ferramentas da etapa ${st.n} · ${st.short}` : tab === 'todas' ? `Todas as ferramentas · adicionar na etapa ${st.n}` : 'Assistente: qual ferramenta usar?'} onClose={onClose} footer={<button className="btn" onClick={onClose}>Concluir</button>}>
       <div className="stack">
         <div className="segmented">
           <button type="button" className={tab === 'etapa' ? 'on' : ''} onClick={() => setTab('etapa')}><Sparkles size={14} />Biblioteca da etapa</button>
+          <button type="button" className={tab === 'todas' ? 'on' : ''} onClick={() => setTab('todas')}><LibIcon size={14} />Todas ({Object.keys(CATALOG).length})</button>
           <button type="button" className={tab === 'arvore' ? 'on' : ''} onClick={() => setTab('arvore')}><Compass size={14} />Qual é a necessidade?</button>
           <button type="button" className={tab === 'matriz' ? 'on' : ''} onClick={() => setTab('matriz')}>Situação identificada</button>
         </div>
@@ -67,6 +73,14 @@ export default function Library({ sid, onClose, onAdded, status, initialTab = 'e
             <div className="search"><Search size={16} /><input className="input" autoFocus placeholder={`Buscar entre ${stageTools(sid).length} ferramentas`} value={q} onChange={(e) => setQ(e.target.value)} /></div>
             <p className="small muted">Escolha pelo menos uma. Só as ferramentas preenchidas aparecem no A4 e nos slides.</p>
             <div className="lib-list">{list.map((d) => <ToolRow key={d.id} def={d} chosen={chosen.has(d.id)} rec={recIds.has(d.id)} disabled={locked(sid)} onAdd={() => doAdd(sid, d.id)} />)}</div>
+          </>
+        )}
+        {tab === 'etapa' && q && list.length === 0 && <p className="small muted">Nenhuma ferramenta com esse nome nesta etapa. <button type="button" className="link" onClick={() => setTab('todas')}>Buscar em todas</button></p>}
+        {tab === 'todas' && (
+          <>
+            <div className="search"><Search size={16} /><input className="input" autoFocus placeholder={`Buscar entre ${Object.keys(CATALOG).length} ferramentas (ex.: BASICO, GUT, 5W2H, SIPOC)`} value={q} onChange={(e) => setQ(e.target.value)} /></div>
+            <p className="small muted">Qualquer ferramenta pode entrar nesta etapa, mesmo que o PSF a indique em outra.</p>
+            <div className="lib-list">{allList.map((d) => <ToolRow key={d.id} def={d} chosen={chosen.has(d.id)} rec={recIds.has(d.id)} disabled={locked(sid)} onAdd={() => doAdd(sid, d.id)} stageLabel={`indicada nas etapas ${(homeOf[d.id] || []).join(', ')}`} />)}</div>
           </>
         )}
         {tab === 'arvore' && (

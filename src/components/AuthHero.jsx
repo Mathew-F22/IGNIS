@@ -13,7 +13,7 @@ export default function AuthHero() {
           {['Problema', 'Causa raiz', 'Ideias', 'Protótipo', 'Resultados', 'Conclusão', 'Pitch'].map((s, i) => <span key={s}>{i + 1}. {s}</span>)}
         </div>
       </div>
-      <div style={{ fontSize: 12, color: '#7f93b3' }}>Programa interno de melhoria contínua</div>
+      <div style={{ fontSize: 12, color: '#7A899B' }}>Programa interno de melhoria contínua</div>
     </section>
   );
 }

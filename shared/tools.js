@@ -204,6 +204,23 @@ const P = {
   opportunity: { kind: 'fields', cfg: { fields: [F('oportunidade', 'Oportunidade'), F('tamanho', 'Tamanho (R$, horas, peças)'), F('urgencia', 'Urgência'), F('esforco', 'Esforço estimado'), F('decisao', 'Vale a pena investigar? Por quê?')] } },
   toc: { kind: 'fields', cfg: { fields: [F('identificar', '1. Identificar a restrição'), F('explorar', '2. Explorar a restrição'), F('subordinar', '3. Subordinar o resto à restrição'), F('elevar', '4. Elevar a restrição'), F('repetir', '5. Voltar ao passo 1 (evitar inércia)')] } },
   scrum: { kind: 'columns', cfg: { groups: ['Backlog', 'Sprint atual', 'Em revisão', 'Concluído'] } },
+  basico: { kind: 'table', cfg: { cols: [T('Alternativa / ideia', 'alt', 'area'), T('B · Benefícios (1-5)', 'b', 'num'), T('A · Abrangência (1-5)', 'a', 'num'), T('S · Satisfação (1-5)', 's', 'num'), T('I · Investimento (5 = baixo)', 'i', 'num'), T('C · Cliente (1-5)', 'c', 'num'), T('O · Operacionalidade (1-5)', 'o', 'num')], comp: { k: 'total', l: 'Total BASICO', f: (r) => { const v = ['b', 'a', 's', 'i', 'c', 'o'].map((k) => n(r[k])); return v.some((x) => x != null) ? v.reduce((a, x) => a + (x || 0), 0) : null; } }, desc: 'Pontuação B·A·S·I·C·O com total e vencedora automáticos', maxOf: 'total', note: 'Notas de 1 (pior) a 5 (melhor). Investimento: 5 = menor custo. Vence o maior total (máximo 30).' } },
+  gut: { kind: 'table', cfg: { cols: [T('Problema / causa', 'prob', 'area'), T('G · Gravidade (1-5)', 'g', 'num'), T('U · Urgência (1-5)', 'u', 'num'), T('T · Tendência (1-5)', 't', 'num')], comp: { k: 'gut', l: 'G × U × T', f: (r) => { const g = n(r.g), u = n(r.u), t = n(r.t); return g != null && u != null && t != null ? g * u * t : null; } }, desc: 'Prioriza problemas por Gravidade × Urgência × Tendência', maxOf: 'gut', note: '1 = sem gravidade, pode esperar, não piora · 5 = gravíssimo, ação imediata, piora rápido. Maior G × U × T (até 125) vem primeiro.' } },
+  budget: { kind: 'table', cfg: { desc: 'Itens do orçamento com CAPEX, OPEX e total automático', cols: [T('Item', 'item', 'area'), T('Categoria', 'cat', 'select', { o: ['Material', 'Equipamento', 'Mão de obra', 'Serviço externo', 'Treinamento', 'Software', 'Outros'] }), T('Tipo', 'tipo', 'select', { o: ['Investimento (CAPEX)', 'Custo recorrente (OPEX/mês)'] }), T('Qtd.', 'qtd', 'num'), T('Valor unitário (R$)', 'vu', 'num'), T('Fornecedor / origem', 'forn')], comp: { k: 'total', l: 'Total (R$)', f: (r) => { const q = n(r.qtd), v = n(r.vu); return v != null ? (q ?? 1) * v : null; } }, sum: ['total'], groupSum: 'cat' } },
+  prosCons: { kind: 'columns', cfg: { desc: 'Quadro de prós, contras e como os contras serão tratados', groups: ['Prós', 'Contras', 'Como tratamos os contras'] } },
+  kaizen: { kind: 'fields', cfg: { images: true, fields: [F('tema', 'Tema e área do Kaizen'), F('equipe', 'Equipe e facilitador'), F('datas', 'Datas do evento'), F('antes', 'Situação antes (dados)'), F('meta', 'Meta do evento'), F('acoes', 'Ações executadas'), F('depois', 'Situação depois (dados)'), F('pendencias', 'Pendências (30 dias)'), F('padrao', 'Padronização')] } },
+  masp: { kind: 'fields', cfg: { fields: [F('identificacao', '1. Identificação do problema'), F('observacao', '2. Observação'), F('analise', '3. Análise (causas)'), F('plano', '4. Plano de ação'), F('acao', '5. Ação'), F('verificacao', '6. Verificação'), F('padronizacao', '7. Padronização'), F('conclusao', '8. Conclusão')] } },
+  opl: { kind: 'fields', cfg: { images: true, fields: [F('tema', 'Tema'), F('tipo', 'Tipo (conhecimento básico, melhoria ou problema)'), F('explicacao', 'Explicação passo a passo'), F('certo', 'Como fazer (certo)'), F('errado', 'Como não fazer (errado)'), F('elaborado', 'Elaborado por / data'), F('treinados', 'Pessoas treinadas')] } },
+  empathy: { kind: 'columns', cfg: { groups: ['O que pensa e sente', 'O que ouve', 'O que vê', 'O que fala e faz', 'Dores', 'Ganhos'] } },
+  muda3m: { kind: 'columns', cfg: { groups: ['Muda (desperdício)', 'Mura (variação)', 'Muri (sobrecarga)'] } },
+  pdpc: { kind: 'table', cfg: { cols: [T('Atividade do plano', 'ativ', 'area'), T('O que pode dar errado', 'falha', 'area'), T('Contramedida', 'contra', 'area'), T('Viável?', 'ok', 'select', { o: ['Sim', 'Não', 'Avaliar'] })] } },
+  heijunka: { kind: 'table', cfg: { cols: [T('Produto / modelo', 'prod'), T('Demanda no período', 'dem', 'num'), T('Lote / pitch', 'lote', 'num'), T('Sequência no quadro', 'seq'), T('Observação', 'obs')], sum: ['dem'] } },
+  milkRun: { kind: 'table', cfg: { cols: [T('Rota / parada', 'parada'), T('Itens entregues', 'itens'), T('Frequência', 'freq'), T('Tempo de ciclo (min)', 'tempo', 'num'), T('Responsável', 'resp')], sum: ['tempo'] } },
+  supermarket: { kind: 'table', cfg: { cols: [T('Item', 'item'), T('Consumo/hora', 'cons', 'num'), T('Reposição (h)', 'rep', 'num'), T('Estoque mín.', 'min', 'num'), T('Estoque máx.', 'max', 'num'), T('Endereço', 'end')] } },
+  mtm: { kind: 'table', cfg: { cols: [T('Movimento', 'mov'), T('Código MTM', 'cod'), T('TMU', 'tmu', 'num'), T('Frequência', 'f', 'num')], comp: { k: 'seg', l: 'Segundos', f: (r) => { const t = n(r.tmu), f = n(r.f); return t != null ? (t * (f ?? 1)) * 0.036 : null; } }, sum: ['seg'] } },
+  leanCanvas: { kind: 'fields', cfg: { fields: [F('problema', 'Problema'), F('segmento', 'Quem é afetado'), F('proposta', 'Proposta de valor'), F('solucao', 'Solução'), F('metricas', 'Métricas-chave'), F('vantagem', 'Vantagem'), F('canais', 'Canais / implantação'), F('custos', 'Custos'), F('ganhos', 'Ganhos')] } },
+  jtbd: { kind: 'fields', cfg: { fields: [F('situacao', 'Quando (situação)'), F('motivacao', 'Eu quero (motivação)'), F('resultado', 'Para que (resultado esperado)'), F('obstaculos', 'Obstáculos de hoje'), F('alternativas', 'Como resolve hoje')] } },
+  cell: { kind: 'fields', cfg: { images: true, fields: [F('produtos', 'Família de produtos'), F('layout', 'Layout da célula (U, L, linha)'), F('operadores', 'Operadores e takt'), F('fluxo', 'Fluxo de uma peça'), F('ganhos', 'Ganhos esperados')] } },
   knowledge: { kind: 'notes', cfg: { labels: { objetivo: 'Conhecimento gerado', aplicacao: 'Onde foi registrado', achados: 'Quem precisa saber', conclusao: 'Como será disseminado' } } },
 };
 
@@ -213,6 +230,11 @@ export const toNum = n;
 
 // Nome do catálogo → modelo.
 const MAP = {
+  'Orçamento detalhado': 'budget', 'Prós e contras': 'prosCons', 'Matriz BASICO': 'basico', 'Matriz GUT': 'gut', 'Kaizen (evento)': 'kaizen', 'MASP': 'masp', 'Lição Ponto a Ponto (LPP / OPL)': 'opl', 'Mapa de Empatia': 'empathy',
+  'Análise 3M (Muda, Mura, Muri)': 'muda3m', 'PDPC (Process Decision Program Chart)': 'pdpc', 'Heijunka': 'heijunka', 'Milk Run': 'milkRun', 'Supermercado de peças': 'supermarket',
+  'MTM (Methods-Time Measurement)': 'mtm', 'Lean Canvas': 'leanCanvas', 'Jobs to be Done': 'jtbd', 'Célula de manufatura': 'cell', 'Diagrama de Árvore': 'tree',
+  'Matriz de Priorização': 'weighted', 'Capabilidade (Cp / Cpk)': 'capability', 'Boxplot': 'stats', 'Diagrama de Setas (CPM)': 'gantt', 'Lead Time Analysis': 'vsm',
+
   'Histórico do indicador EMS': 'kpi',
   'Project Charter': 'charter', 'Project Canvas': 'canvas', 'A3 Report': 'a3', 'A3 Problem Solving': 'a3', 'SIPOC': 'sipoc', 'SMART': 'smart', 'SMART Goals': 'smart', 'SMARTER': 'smarter', 'OKR': 'okr',
   'RACI': 'raci', 'RAM': 'raci', 'Resource Allocation Matrix': 'resources', 'DACI': 'daci', 'RAPID': 'rapid', 'Approval Matrix': 'approvals',
@@ -306,7 +328,7 @@ export const INTERACTIVE = new Set(['ishikawa', 'whys', 'pareto', 'series', 'sca
 const DEFAULT = { kind: 'notes', cfg: {} };
 export function toolDef(name) {
   const preset = P[MAP[name]] || DEFAULT;
-  return { id: slug(name), name, kind: preset.kind, cfg: preset.cfg, desc: DESC_BY_KIND[preset.kind], interactive: INTERACTIVE.has(preset.kind) };
+  return { id: slug(name), name, kind: preset.kind, cfg: preset.cfg, desc: preset.cfg?.desc || DESC_BY_KIND[preset.kind], interactive: INTERACTIVE.has(preset.kind) || !!preset.cfg?.comp };
 }
 
 // Catálogo completo (id → definição), e lista por etapa.

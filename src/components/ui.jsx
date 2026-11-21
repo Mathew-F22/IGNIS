@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Check, AlertCircle } from 'lucide-react';
 
 export const initials = (name = '') => name.split(' ').filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
-const COLORS = ['#2F6FED', '#1F9D74', '#8A5CF5', '#E07A1F', '#D6336C', '#0EA5B7'];
+const COLORS = ['#041E41', '#6B7A66', '#3D2626', '#937359', '#7D6363', '#7A899B', '#3B4536', '#787386'];
 export const colorFor = (id = '') => COLORS[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % COLORS.length];
 
 export function Avatar({ user, size = 32, ring }) {
@@ -118,9 +118,9 @@ export function Logo({ size = 28, light, withText = true }) {
   return (
     <span className={`logo ${light ? 'light' : ''}`}>
       <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" rx="16" fill={light ? '#fff' : '#011E41'} />
-        <path d="M32 12c2 8 12 12 12 24a12 12 0 0 1-24 0c0-6 3-9 6-12 0 5 2 8 5 8-3-7 0-14 1-20z" fill={light ? '#011E41' : '#fff'} />
-        <circle cx="32" cy="38" r="5" fill="#FF6A2B" />
+        <rect width="64" height="64" rx="16" fill={light ? '#fff' : '#041E41'} />
+        <path d="M32 12c2 8 12 12 12 24a12 12 0 0 1-24 0c0-6 3-9 6-12 0 5 2 8 5 8-3-7 0-14 1-20z" fill={light ? '#041E41' : '#fff'} />
+        <circle cx="32" cy="38" r="5" fill="#937359" />
       </svg>
       {withText && <span className="logo-word">IGNIS</span>}
     </span>
