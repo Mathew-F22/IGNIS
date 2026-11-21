@@ -6,11 +6,11 @@ import { toNum as n } from './tools.js';
 const div = (a, b) => (a != null && b ? a / b : null);
 
 export const PILLARS = [
-  { id: 'seguranca', label: 'Segurança', color: '#1F9D74' },
-  { id: 'qualidade', label: 'Qualidade', color: '#8A5CF5' },
-  { id: 'custo', label: 'Custo', color: '#2F6FED' },
-  { id: 'entrega', label: 'Entrega', color: '#E07A1F' },
-  { id: 'pessoas', label: 'Pessoas', color: '#D6457A' },
+  { id: 'seguranca', label: 'Segurança', color: '#6B7A66' },
+  { id: 'qualidade', label: 'Qualidade', color: '#937359' },
+  { id: 'custo', label: 'Custo', color: '#041E41' },
+  { id: 'entrega', label: 'Entrega', color: '#787386' },
+  { id: 'pessoas', label: 'Pessoas', color: '#7D6363' },
 ];
 
 export const KPIS = [

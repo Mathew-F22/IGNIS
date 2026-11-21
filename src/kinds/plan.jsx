@@ -21,7 +21,7 @@ export function financeModel(d, factor = 1) {
   const npvAt = (rate) => flows.reduce((s, f, t) => s + f / Math.pow(1 + rate, t), 0);
   const npv = npvAt(r);
   let irr = null;
-  if (capex > 0 && net > 0) { let lo = -0.99, hi = 5; for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2; if (npvAt(mid) > 0) lo = mid; else hi = mid; } irr = Math.pow(1 + (lo + hi) / 2, 12) - 1; }
+  if (capex > 0 && net > 0) { let lo = -0.99, hi = 1; while (npvAt(hi) > 0 && hi < 1e6) hi *= 2; for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2; if (npvAt(mid) > 0) lo = mid; else hi = mid; } irr = Math.pow(1 + (lo + hi) / 2, 12) - 1; }
   let acc = -capex, dacc = -capex, pbd = null;
   const cum = [acc];
   for (let t = 1; t <= N; t++) { acc += net; dacc += net / Math.pow(1 + r, t); cum.push(acc); if (pbd == null && dacc >= 0) pbd = t; }
@@ -173,6 +173,25 @@ function RiskView({ d }) {
 
 // ---------- FMEA ----------
 const rpn = (x, a = '') => (Number(x[`s${a}`]) || 0) * (Number(x[`o${a}`]) || 0) * (Number(x[`d${a}`]) || 0);
+// Prioridade de Ação (AP) do manual AIAG & VDA FMEA (2019): Alta, Média ou Baixa para cada S-O-D.
+const AP_T = {
+  10: [['HHHH', 'HHHH', 'HHHM', 'HMLL', 'LLLL']],
+  8: [['HHHH', 'HHHM', 'HMMM', 'MMLL', 'LLLL']],
+  6: [['HHMM', 'MMML', 'MLLL', 'LLLL', 'LLLL']],
+  3: [['MMLL', 'LLLL', 'LLLL', 'LLLL', 'LLLL']],
+};
+export function actionPriority(S, O, D) {
+  S = Number(S); O = Number(O); D = Number(D);
+  if (!S || !O || !D) return null;
+  if (S === 1) return 'L';
+  const row = AP_T[S >= 9 ? 10 : S >= 7 ? 8 : S >= 4 ? 6 : 3][0];
+  const oi = O >= 8 ? 0 : O >= 6 ? 1 : O >= 4 ? 2 : O >= 2 ? 3 : 4;
+  const di = D >= 7 ? 0 : D >= 5 ? 1 : D >= 2 ? 2 : 3;
+  return row[oi][di];
+}
+const AP_L = { H: ['Alta', 'red'], M: ['Média', 'amber'], L: ['Baixa', 'green'] };
+const APTag = ({ it, sfx = '' }) => { const a = actionPriority(it[`s${sfx}`] || (sfx ? it.s : null), it[`o${sfx}`], it[`d${sfx}`]); return a ? <span className={`tag ${AP_L[a][1]}`}>{AP_L[a][0]}</span> : '–'; };
+
 export const fmea = {
   Editor({ base, d }) {
     const ctx = useProject();
@@ -180,14 +199,14 @@ export const fmea = {
     const N = (it, k) => <select className="input k-s" value={it[k] || ''} onChange={(e) => ctx.set([...base, 'items', `#${it.id}`, k], Number(e.target.value))}><option value="">-</option>{Array.from({ length: 10 }, (_, i) => <option key={i + 1}>{i + 1}</option>)}</select>;
     return (
       <div className="stack">
-        <div className="row"><BSelect path={[...base, 'tipo']} options={['DFMEA', 'PFMEA', 'FMECA']} /><span className="small muted">S severidade · O ocorrência · D detecção (1 a 10). RPN = S × O × D.</span></div>
+        <div className="row"><BSelect path={[...base, 'tipo']} options={['PFMEA', 'DFMEA', 'FMEA-MSR', 'FMECA', 'Service FMEA', 'Reverse FMEA']} /><span className="small muted">S severidade · O ocorrência · D detecção (1 a 10). AP = Prioridade de Ação do manual AIAG &amp; VDA (Alta, Média, Baixa). RPN = S × O × D, mantido como referência.</span></div>
         <div className="k-table-wrap"><table className="k-table">
-          <thead><tr><th>Item / etapa</th><th>Modo de falha</th><th>Efeito</th><th>Causa</th><th>Controle atual</th><th>S</th><th>O</th><th>D</th><th className="calc">RPN</th><th>Ação recomendada</th><th>S'</th><th>O'</th><th>D'</th><th className="calc">RPN'</th><th /></tr></thead>
+          <thead><tr><th>Item / etapa</th><th>Modo de falha</th><th>Efeito</th><th>Causa</th><th>Controle atual</th><th>S</th><th>O</th><th>D</th><th className="calc">AP</th><th className="calc">RPN</th><th>Ação recomendada</th><th>S'</th><th>O'</th><th>D'</th><th className="calc">AP'</th><th className="calc">RPN'</th><th /></tr></thead>
           <tbody>{items.map((it) => (
             <tr key={it.id}>{['item', 'modo', 'efeito', 'causa', 'controle'].map((k) => <td key={k}><BText path={[...base, 'items', `#${it.id}`, k]} className="cell" multiline rows={1} /></td>)}
-              <td>{N(it, 's')}</td><td>{N(it, 'o')}</td><td>{N(it, 'd')}</td><td className={`calc n ${rpn(it) >= 100 ? 'bad' : ''}`}>{rpn(it) || '–'}</td>
+              <td>{N(it, 's')}</td><td>{N(it, 'o')}</td><td>{N(it, 'd')}</td><td className="calc"><APTag it={it} /></td><td className={`calc n ${rpn(it) >= 100 ? 'bad' : ''}`}>{rpn(it) || '–'}</td>
               <td><BText path={[...base, 'items', `#${it.id}`, 'acao']} className="cell" multiline rows={1} /></td>
-              <td>{N(it, 's2')}</td><td>{N(it, 'o2')}</td><td>{N(it, 'd2')}</td><td className="calc n">{rpn(it, '2') || '–'}</td>
+              <td>{N(it, 's2')}</td><td>{N(it, 'o2')}</td><td>{N(it, 'd2')}</td><td className="calc"><APTag it={it} sfx="2" /></td><td className="calc n">{rpn(it, '2') || '–'}</td>
               <td className="act"><Del onClick={() => ctx.del([...base, 'items'], it.id)} /></td></tr>
           ))}</tbody>
         </table></div>
@@ -198,7 +217,7 @@ export const fmea = {
   },
   View({ d }) {
     const items = (d.items || []).filter((x) => has(x.modo)).sort((a, b) => rpn(b) - rpn(a));
-    return <div className="tv-stack"><table className="tv-table"><thead><tr><th>Modo de falha</th><th>Efeito</th><th>Causa</th><th>S·O·D</th><th>RPN</th><th>Ação</th><th>RPN após</th></tr></thead><tbody>{items.map((x) => <tr key={x.id}><td><b>{x.item}</b> {x.modo}</td><td>{x.efeito}</td><td>{x.causa}</td><td>{x.s || '-'}·{x.o || '-'}·{x.d || '-'}</td><td className={`n ${rpn(x) >= 100 ? 'bad' : ''}`}>{rpn(x) || '–'}</td><td>{x.acao}</td><td className="n">{rpn(x, '2') || '–'}</td></tr>)}</tbody></table><FmeaSummary d={d} /></div>;
+    return <div className="tv-stack"><table className="tv-table"><thead><tr><th>Modo de falha</th><th>Efeito</th><th>Causa</th><th>S·O·D</th><th>AP</th><th>RPN</th><th>Ação</th><th>RPN após</th></tr></thead><tbody>{items.map((x) => <tr key={x.id}><td><b>{x.item}</b> {x.modo}</td><td>{x.efeito}</td><td>{x.causa}</td><td>{x.s || '-'}·{x.o || '-'}·{x.d || '-'}</td><td><APTag it={x} /></td><td className={`n ${rpn(x) >= 100 ? 'bad' : ''}`}>{rpn(x) || '–'}</td><td>{x.acao}</td><td className="n">{rpn(x, '2') || '–'}</td></tr>)}</tbody></table><FmeaSummary d={d} /></div>;
   },
 };
 function FmeaSummary({ d }) {
@@ -206,7 +225,8 @@ function FmeaSummary({ d }) {
   if (!items.length) return null;
   const top = [...items].sort((a, b) => rpn(b) - rpn(a))[0];
   const before = items.reduce((s, x) => s + rpn(x), 0), after = items.reduce((s, x) => s + (rpn(x, '2') || rpn(x)), 0);
-  return <KV cols={3} items={[['Maior RPN', `${rpn(top)} · ${top.modo || top.item}`, 'red'], ['Modos com RPN ≥ 100 ou S ≥ 9', String(items.filter((x) => rpn(x) >= 100 || x.s >= 9).length)], ['Redução total de RPN', before ? `${fmt((1 - after / before) * 100, 0)}%` : '–', 'green']]} />;
+  const apH = items.filter((x) => actionPriority(x.s, x.o, x.d) === 'H').length;
+  return <KV cols={4} items={[['AP alta (ação obrigatória)', String(apH), apH ? 'red' : 'green'], ['Maior RPN', `${rpn(top)} · ${top.modo || top.item}`, 'red'], ['Modos com RPN ≥ 100 ou S ≥ 9', String(items.filter((x) => rpn(x) >= 100 || x.s >= 9).length)], ['Redução total de RPN', before ? `${fmt((1 - after / before) * 100, 0)}%` : '–', 'green']]} />;
 }
 
 // ---------- Gantt ----------
@@ -362,27 +382,28 @@ function KpiView({ d, opts = {} }) {
   const pillar = PILLARS.find((p) => p.id === m.k.pillar);
   const lines = [m.meta != null && { v: m.meta, label: 'Meta', color: '#6B7A66' }, m.marco != null && m.vBefore != null && { v: m.vBefore, label: 'Antes', color: '#AFAAB9' }].filter(Boolean);
   const markerIdx = m.marco != null ? m.rows.findIndex((r) => r.i === m.marco) : null;
-  return (
-    <div className="tv-stack">
-      <div className="tv-kpi-head">
-        {pillar && <span className="tv-pill" style={{ background: pillar.color }}>{pillar.label}</span>}
-        <b>{m.k.id === 'OUTRO' ? (d.nome || 'Indicador') : `${m.k.id} · ${m.k.name}`}</b>
-        <span className="tv-sub">{m.k.formula}</span>
-        {m.rows.length > 0 && <span className="tv-sub">Período: {m.rows[0].label} a {m.rows[m.rows.length - 1].label} ({m.rows.length} {d.freq === 'semanal' ? 'semanas' : 'meses'})</span>}
-      </div>
-      <Series values={m.rows.map((r) => r.val)} labels={m.rows.map((r) => r.label)} lines={lines} height={220} marker={markerIdx != null && markerIdx > 0 ? markerIdx : null} />
-      <KV cols={4} items={[
-        m.marco != null ? ['Antes da melhoria', m.vBefore != null ? fmt(m.vBefore, 2) + u : '–'] : ['Média do período', m.vAll != null ? fmt(m.vAll, 2) + u : '–'],
-        m.marco != null ? ['Depois da melhoria', m.vAfter != null ? fmt(m.vAfter, 2) + u : '–', 'blue'] : ['Último período', m.last ? fmt(m.last.val, 2) + u : '–', 'blue'],
-        ['Variação', m.delta != null ? `${m.delta > 0 ? '+' : ''}${fmt(m.delta, 1)}%` : '–', m.delta == null ? '' : (m.red ? m.delta < 0 : m.delta > 0) ? 'green' : 'red'],
-        ['Meta', m.meta != null ? `${fmt(m.meta, 2)}${u}${m.hit == null ? '' : m.hit ? ' · atingida' : ' · não atingida'}` : '–', m.hit == null ? '' : m.hit ? 'green' : 'red'],
-      ]} />
-      {m.losses.length > 0 && <Bars data={m.losses.sort((a, b) => b.v - a.v)} cumulative height={170} unit="Unidades perdidas por código DFP" />}
-      {m.money2 != null && m.money2 > 0 && <KV cols={1} items={[['Valor de sucata no período', money(m.money2)]]} />}
-      {m.k.note && <p className="tv-note">{m.k.note}</p>}
-      <Txt v={d.obs} />
+  const head = (
+    <div className="tv-kpi-head">
+      {pillar && <span className="tv-pill" style={{ background: pillar.color }}>{pillar.label}</span>}
+      <b>{m.k.id === 'OUTRO' ? (d.nome || 'Indicador') : `${m.k.id} · ${m.k.name}`}</b>
+      <span className="tv-sub">{m.k.formula}</span>
+      {m.rows.length > 0 && <span className="tv-sub">Período: {m.rows[0].label} a {m.rows[m.rows.length - 1].label} ({m.rows.length} {d.freq === 'semanal' ? 'semanas' : 'meses'})</span>}
     </div>
   );
+  const series = <Series values={m.rows.map((r) => r.val)} labels={m.rows.map((r) => r.label)} lines={lines} height={220} marker={markerIdx != null && markerIdx > 0 ? markerIdx : null} />;
+  const kv = (
+    <KV cols={opts.slide ? 2 : 4} items={[
+      m.marco != null ? ['Antes da melhoria', m.vBefore != null ? fmt(m.vBefore, 2) + u : '–'] : ['Média do período', m.vAll != null ? fmt(m.vAll, 2) + u : '–'],
+      m.marco != null ? ['Depois da melhoria', m.vAfter != null ? fmt(m.vAfter, 2) + u : '–', 'blue'] : ['Último período', m.last ? fmt(m.last.val, 2) + u : '–', 'blue'],
+      ['Variação', m.delta != null ? `${m.delta > 0 ? '+' : ''}${fmt(m.delta, 1)}%` : '–', m.delta == null ? '' : (m.red ? m.delta < 0 : m.delta > 0) ? 'green' : 'red'],
+      ['Meta', m.meta != null ? `${fmt(m.meta, 2)}${u}${m.hit == null ? '' : m.hit ? ' · atingida' : ' · não atingida'}` : '–', m.hit == null ? '' : m.hit ? 'green' : 'red'],
+    ]} />
+  );
+  const losses = m.losses.length > 0 && <Bars data={m.losses.sort((a, b) => b.v - a.v)} cumulative height={170} unit="Unidades perdidas por código DFP" />;
+  const extra = <>{m.money2 != null && m.money2 > 0 && <KV cols={1} items={[['Valor de sucata no período', money(m.money2)]]} />}{m.k.note && <p className="tv-note">{m.k.note}</p>}<Txt v={d.obs} /></>;
+  // No slide do indicador: gráfico principal à esquerda, números e perdas à direita (nada fica espremido).
+  if (opts.slide) return <div className="tv-kpi-slide"><div className="main">{head}{series}{losses}</div><div className="side">{kv}{extra}</div></div>;
+  return <div className="tv-stack">{head}{series}{kv}{losses}{extra}</div>;
 }
 export const kpi = {
   Editor({ base, d }) {

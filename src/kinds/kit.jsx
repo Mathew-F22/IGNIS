@@ -4,6 +4,7 @@ import { useProject } from '../lib/project.jsx';
 import { ImageList } from '../components/pickers.jsx';
 import { toNum } from '../../shared/tools.js';
 
+import { tCritical } from '../../shared/analytics.js';
 export const num = toNum;
 export const fmt = (v, d = 1) => (v == null || !Number.isFinite(v) ? '–' : (Math.abs(v) >= 1000 ? Math.round(v) : Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR'));
 export const money = (v) => (v == null || !Number.isFinite(v) ? '–' : `R$ ${Math.round(v).toLocaleString('pt-BR')}`);
@@ -21,7 +22,7 @@ export function stats(a) {
   const maxC = Math.max(...counts.values());
   const mode = maxC > 1 ? [...counts.entries()].filter(([, c]) => c === maxC).map(([v]) => v)[0] : null;
   const sd = Math.sqrt(variance);
-  return { n, mean, median: q(0.5), mode, variance, sd, min: s[0], max: s[n - 1], range: s[n - 1] - s[0], q1: q(0.25), q3: q(0.75), ci: n > 1 ? 1.96 * sd / Math.sqrt(n) : null };
+  return { n, mean, median: q(0.5), mode, variance, sd, min: s[0], max: s[n - 1], range: s[n - 1] - s[0], q1: q(0.25), q3: q(0.75), ci: n > 1 ? tCritical(n - 1) * sd / Math.sqrt(n) : null };
 }
 
 // Distribuição t de Student (para p-valor).

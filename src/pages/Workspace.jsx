@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronRight, Compass, Flag, Lightbulb, Lock, Plus, Presentation, Printer, Star, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Compass, Flag, Lightbulb, Lock, Plus, Presentation, Printer, Star, Trash2, Users } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { ProjectProvider, useProject } from '../lib/project.jsx';
@@ -11,7 +11,7 @@ import { projectStatus, toolFilled } from '../../shared/progress.js';
 import { Avatar, Modal, Ring, toast } from '../components/ui.jsx';
 import { TypeSelect } from '../components/pickers.jsx';
 import MemberPicker from '../components/MemberPicker.jsx';
-import Library from '../components/Library.jsx';
+import Library, { UsageCard } from '../components/Library.jsx';
 import StageFields from '../components/StageFields.jsx';
 import { KINDS } from '../kinds/index.js';
 
@@ -159,6 +159,7 @@ function StagePage({ sid, ps }) {
 }
 
 function ToolCard({ sid, t, open, onToggle }) {
+  const [how, setHow] = useState(false);
   const ctx = useProject();
   const def = CATALOG[t.tool];
   if (!def) return null;
@@ -174,11 +175,13 @@ function ToolCard({ sid, t, open, onToggle }) {
         <div className="row" style={{ gap: 6 }}>
           {def.interactive && <span className="tag blue">interativa</span>}
           <span className={`tag ${filled ? 'green' : ''}`}>{filled ? 'Preenchida' : 'Não preenchida'}</span>
+          <button className={`icon-btn sm ${how ? 'on' : ''}`} title="Como usar esta ferramenta (passos e exemplo)" aria-pressed={how} onClick={() => { setHow(!how); if (!open) onToggle(); }}><BookOpen size={15} /></button>
           <button className={`icon-btn sm ${featured ? 'star-on' : ''}`} title="Evidência principal no slide executivo" aria-pressed={featured} onClick={() => ctx.set(['pitch', 'destaques', sid], featured ? '' : t.id)}><Star size={15} fill={featured ? 'currentColor' : 'none'} /></button>
           <Link className="icon-btn sm" title="Imprimir esta ferramenta (A4)" to={`/projeto/${ctx.meta.id}/relatorio?ferramenta=${t.id}`}><Printer size={15} /></Link>
           <button className="icon-btn sm danger" title="Remover ferramenta" onClick={remove}><Trash2 size={15} /></button>
         </div>
       </div>
+      {open && how && <div className="tool-how"><UsageCard def={def} /></div>}
       {open && <div className="tool-body"><K.Editor base={base} d={t.data} cfg={def.cfg} def={def} sid={sid} /></div>}
     </section>
   );

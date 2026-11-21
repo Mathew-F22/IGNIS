@@ -4,6 +4,7 @@ import { applyOp, resolve, uid } from '../../shared/ops.js';
 import { getToken } from './api.js';
 
 const Ctx = createContext(null);
+export const ProjectCtx = Ctx;
 export const useProject = () => useContext(Ctx);
 
 export function ProjectProvider({ projectId, meta, setMeta, me, children }) {

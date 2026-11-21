@@ -1,3 +1,4 @@
+import { EXTRA } from './catalog-extra.js';
 // Project Solution Framework (PSF): 17 etapas, 5 fases com Stage Gates,
 // biblioteca de ferramentas por etapa, matriz de seleção e árvore de decisão.
 
@@ -322,6 +323,7 @@ const EXTRA_TOOLS = {
   'Jobs to be Done': ['s02'], 'Célula de manufatura': ['s10'], 'Diagrama de Árvore': ['s06', 's08'], 'Matriz de Priorização': ['s09'], 'Capabilidade (Cp / Cpk)': ['s05', 's16'],
   'Boxplot': ['s05'], 'Diagrama de Setas (CPM)': ['s14'], 'Lead Time Analysis': ['s04'], '5W2H': ['s14'], 'SIPOC': ['s04'],
 };
+for (const e of EXTRA) EXTRA_TOOLS[e.name] = [...new Set([...(EXTRA_TOOLS[e.name] || []), ...e.stages])];
 for (const [name, ids] of Object.entries(EXTRA_TOOLS)) for (const sid of ids) { const st = STAGES.find((x) => x.id === sid); if (!st.tools.includes(name)) st.tools.unshift(name); }
 STAGES.find((x) => x.id === 's09').rec.unshift('Matriz BASICO');
 STAGES.find((x) => x.id === 's03').rec.push('Matriz GUT');

@@ -1,6 +1,7 @@
 // Biblioteca de ferramentas: cada nome do catálogo PSF ganha um tipo (kind)
 // e uma configuração. Tipos interativos têm cálculo, gráfico ou diagrama;
 // os demais são modelos estruturados para preencher.
+import { EXTRA } from './catalog-extra.js';
 import { STAGES, slug } from './psf.js';
 
 const T = (l, k, t = 'text', extra = {}) => ({ l, k, t, ...extra });
@@ -314,6 +315,8 @@ const MAP = {
 };
 
 // O que cada ferramenta faz, em uma linha (mostrado na biblioteca).
+for (const e of EXTRA) { const key = `x:${e.name}`; P[key] = { kind: e.kind, cfg: e.cfg || {} }; MAP[e.name] = key; }
+
 const DESC_BY_KIND = {
   fields: 'Modelo estruturado para preencher', table: 'Tabela de trabalho', columns: 'Quadro em colunas', tree: 'Diagrama de árvore', checklist: 'Lista de verificação',
   calc: 'Calculadora', ishikawa: 'Diagrama de causa e efeito interativo', whys: 'Cadeia de porquês até a causa raiz', pareto: 'Gráfico de Pareto automático',
@@ -321,9 +324,9 @@ const DESC_BY_KIND = {
   relations: 'Matriz de influências entre fatores', flow: 'Fluxo do processo com tempos e VA/NVA', yamazumi: 'Balanceamento de carga x takt', stakeholder: 'Mapa poder x interesse',
   brainstorm: 'Quadro de ideias com votação', matrix2x2: 'Matriz 2x2 de priorização', weighted: 'Matriz de decisão com pesos', finance: 'ROI, payback, VPL e TIR',
   montecarlo: 'Simulação de incerteza do retorno', risk: 'Matriz de probabilidade x severidade', fmea: 'FMEA com RPN', gantt: 'Cronograma em barras', raci: 'Matriz de responsabilidades',
-  pdca: 'Ciclos Planejar, Executar, Verificar, Agir', beforeAfter: 'Antes x depois com medições', kpi: 'KPI EMS com fórmula e histórico por período', notes: 'Registro estruturado com imagens',
+  pdca: 'Ciclos Planejar, Executar, Verificar, Agir', beforeAfter: 'Antes x depois com medições', precontrol: 'Zonas verde, amarela e vermelha com decisão automática', bvc: 'Valida B melhor que C com confiança estatística', tukey: 'Contagem extrema de Tukey entre peças boas e ruins', multivari: 'Famílias de variação: peça, peça a peça, tempo', isoplot: 'Valida o sistema de medição (ΔP ÷ ΔM)', weibull: 'β, η, MTTF, B10 e confiabilidade', rbd: 'Confiabilidade do sistema em série e paralelo', kpi: 'KPI EMS com fórmula e histórico por período', notes: 'Registro estruturado com imagens',
 };
-export const INTERACTIVE = new Set(['ishikawa', 'whys', 'pareto', 'series', 'scatter', 'compare', 'doe', 'relations', 'flow', 'yamazumi', 'stakeholder', 'brainstorm', 'matrix2x2', 'weighted', 'finance', 'montecarlo', 'risk', 'fmea', 'gantt', 'raci', 'pdca', 'beforeAfter', 'calc', 'tree', 'kpi']);
+export const INTERACTIVE = new Set(['ishikawa', 'whys', 'pareto', 'series', 'scatter', 'compare', 'doe', 'relations', 'flow', 'yamazumi', 'stakeholder', 'brainstorm', 'matrix2x2', 'weighted', 'finance', 'montecarlo', 'risk', 'fmea', 'gantt', 'raci', 'pdca', 'beforeAfter', 'calc', 'tree', 'kpi', 'precontrol', 'bvc', 'tukey', 'multivari', 'isoplot', 'weibull', 'rbd']);
 
 const DEFAULT = { kind: 'notes', cfg: {} };
 export function toolDef(name) {

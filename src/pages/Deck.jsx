@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Eye, EyeOff, Maximize, Printer } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Eye, EyeOff, LayoutList, Maximize, Printer, X } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { ProjectProvider, useProject } from '../lib/project.jsx';
-import { Slide, SlideCanvas, buildDeck, exportPptx, W, H } from '../lib/deck.jsx';
+import { DeckNav, Slide, SlideCanvas, buildDeck, exportPptx, W, H } from '../lib/deck.jsx';
 import { kpiModel } from '../kinds/index.js';
 import { toast } from '../components/ui.jsx';
 
@@ -25,6 +25,7 @@ function DeckInner() {
   const [present, setPresent] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [organize, setOrganize] = useState(false);
   const exportRef = useRef();
   const project = doc ? { ...meta, data: doc } : null;
   const all = project ? buildDeck(project) : [];
@@ -68,7 +69,17 @@ function DeckInner() {
 
   if (!project) return <div className="deck-shell"><div className="empty" style={{ color: '#fff', paddingTop: 120 }}>Sincronizando…</div></div>;
   const hiddenSet = new Set(doc.pitch?.ocultos || []);
-  const toggleHide = () => ctx.set(['pitch', 'ocultos'], hiddenSet.has(cur.id) ? [...hiddenSet].filter((x) => x !== cur.id) : [...hiddenSet, cur.id]);
+  const setHidden = (ids, hide) => { const nx = new Set(hiddenSet); for (const x of ids) hide ? nx.add(x) : nx.delete(x); ctx.set(['pitch', 'ocultos'], [...nx]); };
+  const toggleId = (id) => setHidden([id], !hiddenSet.has(id));
+  const toggleHide = () => toggleId(cur.id);
+  // Links dentro dos slides: roteiro → slide, régua → fase, evidência → anexo.
+  const jump = (s) => { if (!s || (present && s.hidden)) return; setI(all.indexOf(s)); };
+  const nav = {
+    toId: (id) => jump(all.find((s) => s.id === id)),
+    toPhase: (n) => jump(all.find((s) => s.type === 'exec' && s.phase === n && !(present && s.hidden))),
+    toAnnex: (tid) => jump(all.find((s) => (s.type === 'annex' || s.type === 'kpi') && s.t.id === tid)),
+    hasAnnex: (tid) => all.some((s) => (s.type === 'annex' || s.type === 'kpi') && s.t.id === tid && !(present && s.hidden)),
+  };
   const total = shown.length;
   const numOf = (s) => shown.indexOf(s);
   const kpiCur = cur?.type === 'kpi' ? kpiModel(cur.t.data) : null;
@@ -84,6 +95,7 @@ function DeckInner() {
             <span className="small" style={{ color: '#ACB9C1' }}>{total} slides · só o que foi preenchido</span>
           </div>
           <div className="row">
+            <button className={`btn secondary sm ${organize ? 'on' : ''}`} onClick={() => setOrganize(!organize)} aria-pressed={organize}><LayoutList size={15} />Organizar slides{hiddenSet.size ? ` · ${all.filter((x) => x.hidden).length} ocultos` : ''}</button>
             <button className="btn secondary sm" onClick={printPdf}><Printer size={15} />PDF</button>
             <button className="btn secondary sm" disabled={exporting} onClick={pptx}><Download size={15} />{exporting ? 'Gerando…' : 'PowerPoint'}</button>
             <button className="btn accent sm" onClick={startPresent}><Maximize size={15} />Apresentar</button>
@@ -92,14 +104,17 @@ function DeckInner() {
         <div className="deck-main">
           <div className="deck-thumbs">
             {all.map((s, n) => (
-              <button key={s.id} className={`${n === i ? 'on' : ''} ${s.hidden ? 'off' : ''} ${s.type === 'annex' ? 'annex' : ''}`} onClick={() => go(n)} aria-label={`Slide: ${s.label}`}>
-                <SlideCanvas><Slide slide={s} project={project} index={numOf(s)} total={total} /></SlideCanvas>
-                <span className="n">{s.hidden ? '–' : numOf(s) + 1}</span>
-              </button>
+              <div key={s.id} className={`thumb-wrap ${n === i ? 'on' : ''} ${s.hidden ? 'off' : ''} ${s.type === 'annex' ? 'annex' : ''}`}>
+                <button className="thumb" onClick={() => go(n)} aria-label={`Slide: ${s.label}`} aria-current={n === i}>
+                  <SlideCanvas><Slide slide={s} project={project} index={numOf(s)} total={total} /></SlideCanvas>
+                  <span className="n">{s.hidden ? 'oculto' : numOf(s) + 1}</span>
+                </button>
+                <button className="thumb-eye" onClick={() => toggleId(s.id)} title={s.hidden ? 'Mostrar este slide' : 'Ocultar este slide'} aria-label={s.hidden ? 'Mostrar slide' : 'Ocultar slide'}>{s.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+              </div>
             ))}
           </div>
           <div className="deck-stage">
-            {cur && <SlideCanvas><Slide slide={cur} project={project} index={numOf(cur)} total={total} /></SlideCanvas>}
+            {cur && <div className={`stage-wrap ${cur.hidden ? 'is-hidden' : ''}`}><DeckNav.Provider value={nav}><SlideCanvas><Slide slide={cur} project={project} index={numOf(cur)} total={total} /></SlideCanvas></DeckNav.Provider>{cur.hidden && <div className="stage-hidden"><EyeOff size={16} />Slide oculto: não entra na apresentação, no PDF nem no PowerPoint.<button className="btn sm" onClick={toggleHide}>Mostrar</button></div>}</div>}
             <div className="row deck-ctl">
               <button className="icon-btn" style={{ color: '#fff' }} onClick={() => go(i - 1)} aria-label="Anterior"><ChevronLeft /></button>
               <span className="small">{cur?.label}</span>
@@ -115,16 +130,57 @@ function DeckInner() {
               </div>
             )}
           </div>
+          {organize && <Organizer all={all} hiddenSet={hiddenSet} setHidden={setHidden} toggleId={toggleId} cur={cur} go={(s) => setI(all.indexOf(s))} onClose={() => setOrganize(false)} />}
         </div>
       </div>
       {present && cur && (
         <div className="presenting" onClick={() => goPres(1)} onContextMenu={(e) => { e.preventDefault(); goPres(-1); }}>
-          <SlideCanvas><Slide slide={shown[presIdx]} project={project} index={presIdx} total={total} /></SlideCanvas>
+          <DeckNav.Provider value={nav}><SlideCanvas><Slide slide={shown[presIdx]} project={project} index={presIdx} total={total} /></SlideCanvas></DeckNav.Provider>
           <span className="pager">{presIdx + 1} / {total}</span>
         </div>
       )}
       {printing && <div className="print-only-slides">{shown.map((s, n) => <div key={s.id} className="print-slide"><SlideCanvas><Slide slide={s} project={project} index={n} total={total} /></SlideCanvas></div>)}</div>}
       {exporting && <div className="export-slides" ref={exportRef}>{shown.map((s, n) => <div key={s.id} className="export-slide" style={{ width: W, height: H }}><Slide slide={s} project={project} index={n} total={total} /></div>)}</div>}
     </>
+  );
+}
+
+// Painel para escolher quais slides entram na apresentação, por grupo.
+const GROUPS = [
+  ['Abertura', (s) => s.type === 'agenda' || (s.type === 'exec' && !s.phase)],
+  ['Fase 1 · Problema', (s) => s.phase === 1], ['Fase 2 · Diagnóstico', (s) => s.phase === 2], ['Fase 3 · Solução', (s) => s.phase === 3],
+  ['Fase 4 · Viabilidade e decisão', (s) => s.phase === 4], ['Fase 5 · Resultado', (s) => s.phase === 5 && s.type === 'exec'],
+  ['Indicadores EMS', (s) => s.type === 'kpi'], ['Dossiê técnico (anexos)', (s) => s.type === 'divider' || s.type === 'annex'],
+];
+function Organizer({ all, hiddenSet, setHidden, toggleId, cur, go, onClose }) {
+  const used = new Set();
+  const groups = GROUPS.map(([title, f]) => { const items = all.filter((s) => !used.has(s) && f(s)); items.forEach((s) => used.add(s)); return { title, items }; }).filter((g) => g.items.length);
+  const rest = all.filter((s) => !used.has(s)); if (rest.length) groups.push({ title: 'Outros', items: rest });
+  const shownN = all.filter((s) => !s.hidden).length;
+  return (
+    <aside className="deck-org" aria-label="Organizar slides">
+      <div className="deck-org-head"><div><b>Organizar slides</b><span>{shownN} de {all.length} na apresentação</span></div><button className="icon-btn" style={{ color: '#fff' }} onClick={onClose} aria-label="Fechar"><X size={18} /></button></div>
+      <div className="deck-org-actions">
+        <button className="btn secondary sm" onClick={() => setHidden(all.map((s) => s.id), false)}>Mostrar todos</button>
+        <button className="btn secondary sm" onClick={() => setHidden(all.filter((s) => s.type === 'annex' || s.type === 'divider').map((s) => s.id), true)}>Só a parte executiva</button>
+      </div>
+      <div className="deck-org-list">
+        {groups.map((g) => {
+          const on = g.items.filter((s) => !s.hidden).length;
+          return (
+            <section key={g.title}>
+              <header><span>{g.title}</span><button className="link" onClick={() => setHidden(g.items.map((s) => s.id), on > 0)}>{on > 0 ? 'Ocultar grupo' : 'Mostrar grupo'}</button></header>
+              {g.items.map((s) => (
+                <label key={s.id} className={`deck-org-row ${s === cur ? 'cur' : ''} ${s.hidden ? 'off' : ''}`}>
+                  <input type="checkbox" checked={!s.hidden} onChange={() => toggleId(s.id)} />
+                  <span className="sw" aria-hidden="true" />
+                  <button type="button" className="t" onClick={(e) => { e.preventDefault(); go(s); }}>{s.label}</button>
+                </label>
+              ))}
+            </section>
+          );
+        })}
+      </div>
+    </aside>
   );
 }

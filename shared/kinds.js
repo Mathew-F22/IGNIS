@@ -44,6 +44,13 @@ export function initData(def) {
     case 'pdca': return { cycles: [{ id: uid(), p: '', d: '', c: '', a: '', st: 'Planejar' }] };
     case 'beforeAfter': return { indicador: '', unidade: '', sentido: 'Reduzir', antes: '', meta: '', med: Array.from({ length: 12 }, (_, i) => ({ id: uid(), label: `S${i + 1}`, valor: '' })), fotosAntes: [], fotosDepois: [], obs: '' };
     case 'kpi': return { kpi: 'NRFT', freq: 'mensal', inicio: new Date().toISOString().slice(0, 7), meta: '', marco: '', periodos: Array.from({ length: 6 }, () => ({ id: uid() })), obs: '' };
+    case 'precontrol': return { lie: '', lse: '', caract: '', leituras: '' };
+    case 'bvc': return { resposta: '', sentido: 'Maior é melhor', unidade: '', b: '', c: '' };
+    case 'tukey': return { vars: [{ id: uid(), nome: '', boas: '', mas: '' }] };
+    case 'multivari': return { caract: '', unidade: '', rows: Array.from({ length: 3 }, (_, i) => ({ id: uid(), grupo: '', peca: String(i + 1), leituras: '' })) };
+    case 'isoplot': return { pares: '' };
+    case 'weibull': return { item: '', unidade: 'h', missao: '', falhas: '', suspensos: '' };
+    case 'rbd': return { stages: [{ id: uid(), nome: '', r: '', n: '1', k: '1' }] };
     default: return {};
   }
 }
@@ -78,6 +85,13 @@ export function isFilled(kind, d) {
     case 'pdca': return (d.cycles || []).some((c) => s(c.p) || s(c.d) || s(c.c) || s(c.a));
     case 'beforeAfter': return s(String(d.antes ?? '')) || (d.med || []).some((m) => s(String(m.valor ?? ''))) || imgs(d.fotosAntes) || imgs(d.fotosDepois);
     case 'kpi': return (d.periodos || []).some((r) => anyStr(r, ['id', 'fase']));
+    case 'precontrol': return s(d.leituras);
+    case 'bvc': return s(d.b) || s(d.c);
+    case 'tukey': return (d.vars || []).some((v) => s(v.boas) || s(v.mas));
+    case 'multivari': return (d.rows || []).some((r) => s(r.leituras));
+    case 'isoplot': return s(d.pares);
+    case 'weibull': return s(d.falhas);
+    case 'rbd': return (d.stages || []).some((x) => s(x.nome) && s(String(x.r ?? '')));
     default: return anyStr(d);
   }
 }

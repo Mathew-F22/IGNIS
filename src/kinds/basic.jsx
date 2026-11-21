@@ -265,7 +265,7 @@ export const checklist = {
 };
 
 // ---------- calculadoras ----------
-const CALCS = {
+export const CALCS = {
   oee: {
     inputs: [['tempo', 'Tempo planejado (min)'], ['paradas', 'Paradas (min)'], ['ciclo', 'Ciclo ideal (s/peça)'], ['total', 'Peças produzidas'], ['boas', 'Peças boas']],
     run: (v) => { const op = v.tempo - (v.paradas || 0); const D = v.tempo ? op / v.tempo : null; const Pf = op && v.ciclo && v.total != null ? (v.ciclo * v.total) / (op * 60) : null; const Q = v.total ? (v.boas ?? v.total) / v.total : null; return [['Disponibilidade', pc(D)], ['Performance', pc(Pf)], ['Qualidade', pc(Q)], ['OEE', pc(D != null && Pf != null && Q != null ? D * Pf * Q : null), 'big']]; },
@@ -309,6 +309,59 @@ const CALCS = {
       const rwl = HM != null && VM != null ? 23 * HM * VM * DM * AM * (v.fm ?? 1) * (v.cm ?? 1) : null;
       const li = rwl && v.carga ? v.carga / rwl : null;
       return [['Limite de peso recomendado (LPR)', rwl ? `${fmt(rwl)} kg` : '–'], ['Índice de levantamento (IL)', li ? fmt(li, 2) : '–', 'big'], ['Interpretação', li == null ? '–' : li <= 1 ? 'Aceitável (IL ≤ 1)' : li <= 3 ? 'Risco aumentado (1 < IL ≤ 3): redesenhar' : 'Risco alto (IL > 3): mudar com urgência', li == null ? '' : li <= 1 ? 'green' : 'red']];
+    },
+  },
+  reliability: {
+    inputs: [['tempo', 'Tempo total de operação (h)'], ['falhas', 'Número de falhas no período'], ['reparo', 'Tempo total de reparo (h)'], ['missao', 'Tempo de missão para confiabilidade (h)']],
+    run: (v) => {
+      const mtbf = v.falhas ? v.tempo / v.falhas : null, mttr = v.falhas ? (v.reparo ?? 0) / v.falhas : null;
+      const A = mtbf != null && mttr != null ? mtbf / (mtbf + mttr) : null, R = mtbf && v.missao != null ? Math.exp(-v.missao / mtbf) : null;
+      return [['MTBF', mtbf != null ? `${fmt(mtbf)} h` : '–', 'big'], ['MTTR', mttr != null ? `${fmt(mttr, 2)} h` : '–'], ['Disponibilidade inerente', pc(A)], ['Taxa de falha λ', mtbf ? `${fmt(1e3 / mtbf, 3)} falhas/1.000 h` : '–'], ['Confiabilidade na missão R(t) = e^(−t/MTBF)', pc(R)]];
+    },
+  },
+  markov: {
+    inputs: [['lambda', 'Taxa de falha λ (falhas/h)'], ['mu', 'Taxa de reparo μ (reparos/h)']],
+    run: (v) => { const A = v.lambda != null && v.mu ? v.mu / (v.lambda + v.mu) : null; return [['Disponibilidade em regime A = μ ÷ (λ + μ)', pc(A), 'big'], ['MTBF = 1 ÷ λ', v.lambda ? `${fmt(1 / v.lambda)} h` : '–'], ['MTTR = 1 ÷ μ', v.mu ? `${fmt(1 / v.mu, 2)} h` : '–'], ['Horas paradas por ano', A != null ? `${fmt((1 - A) * 8760)} h` : '–']]; },
+  },
+  bayes: {
+    inputs: [['prior', 'Probabilidade inicial da causa (%)'], ['sens', 'Evidência aparece quando a causa existe (%)'], ['fp', 'Evidência aparece sem a causa (falso positivo, %)']],
+    run: (v) => { const p = (v.prior ?? 0) / 100, s = (v.sens ?? 0) / 100, f = (v.fp ?? 0) / 100; const den = s * p + f * (1 - p); const post = den ? (s * p) / den : null; const neg = 1 - den ? ((1 - s) * p) / (1 - den) : null; return [['Probabilidade da causa, dada a evidência', pc(post), 'big'], ['Se a evidência NÃO aparecer', pc(neg)], ['Razão de verossimilhança', f ? fmt(s / f, 2) : '–']]; },
+  },
+  sil: {
+    inputs: [['f0', 'Frequência do evento iniciador (por ano)'], ['pfd', 'PFD das camadas existentes (produto, ex.: 0,1)'], ['ftol', 'Frequência tolerável (por ano)']],
+    run: (v) => {
+      const fm = v.f0 != null ? v.f0 * (v.pfd ?? 1) : null; const rrf = fm && v.ftol ? Number((fm / v.ftol).toPrecision(10)) : null; const pfd = rrf ? Number((1 / rrf).toPrecision(10)) : null;
+      const sil = pfd == null ? '–' : rrf <= 1 ? 'Nenhuma função instrumentada necessária' : pfd >= 1e-1 ? 'Abaixo de SIL 1 (RRF < 10)' : pfd >= 1e-2 ? 'SIL 1' : pfd >= 1e-3 ? 'SIL 2' : pfd >= 1e-4 ? 'SIL 3' : pfd >= 1e-5 ? 'SIL 4' : 'Além de SIL 4: reveja o projeto';
+      return [['Frequência mitigada atual', fm != null ? `${fm.toExponential(2)} /ano` : '–'], ['Redução de risco necessária (RRF)', rrf ? fmt(rrf, 0) : '–'], ['PFD exigida da função', pfd ? pfd.toExponential(2) : '–'], ['Nível de integridade (IEC 61508/61511)', sil, 'big']];
+    },
+  },
+  heart: {
+    inputs: [['gtt', 'Probabilidade nominal de erro da tarefa genérica (ex.: 0,003)'], ['e1', 'Condição 1: multiplicador máximo (EPC)'], ['a1', 'Condição 1: proporção do efeito (0 a 1)'], ['e2', 'Condição 2: multiplicador máximo'], ['a2', 'Condição 2: proporção (0 a 1)'], ['e3', 'Condição 3: multiplicador máximo'], ['a3', 'Condição 3: proporção (0 a 1)']],
+    run: (v) => {
+      const f = [[v.e1, v.a1], [v.e2, v.a2], [v.e3, v.a3]].filter(([e, a]) => e != null && a != null).map(([e, a]) => (e - 1) * a + 1);
+      const hep = v.gtt != null ? Math.min(1, f.reduce((x, y) => x * y, v.gtt)) : null;
+      return [['Probabilidade de erro humano (HEP)', hep != null ? fmt(hep, 4) : '–', 'big'], ['Erro esperado a cada', hep ? `${fmt(1 / hep, 0)} execuções` : '–'], ['Fatores aplicados', f.map((x) => `×${fmt(x, 2)}`).join(' ') || '–']];
+    },
+  },
+  fta: {
+    inputs: [['porta', 'Porta lógica do evento topo (E ou OU)'], ['probs', 'Probabilidades dos eventos básicos, separadas por ; (ex.: 0,01; 0,05)']],
+    text: ['porta', 'probs'],
+    run: (v) => {
+      const ps = String(v.probs || '').split(/[;\n]+/).map(num).filter((x) => x != null);
+      const and = /^e$|and/i.test(String(v.porta || '').trim());
+      const top = !ps.length ? null : and ? ps.reduce((a, b) => a * b, 1) : 1 - ps.reduce((a, b) => a * (1 - b), 1);
+      return [['Probabilidade do evento topo', top != null ? top.toExponential(3) : '–', 'big'], ['Regra', and ? 'Porta E: todos precisam ocorrer (produto)' : 'Porta OU: basta um ocorrer, 1 − Π(1 − p)'], ['Eventos considerados', String(ps.length)]];
+    },
+  },
+  var: {
+    inputs: [['perdas', 'Perdas observadas ou simuladas (R$), separadas por ;'], ['conf', 'Nível de confiança (%)']],
+    text: ['perdas'],
+    run: (v) => {
+      const xs = String(v.perdas || '').split(/[;\n]+/).map(num).filter((x) => x != null).sort((a, b) => a - b);
+      if (!xs.length) return [['VaR', '–', 'big']];
+      const c = (v.conf ?? 95) / 100; const idx = Math.min(xs.length - 1, Math.ceil(c * xs.length) - 1); const VaR = xs[Math.max(0, idx)];
+      const tail = xs.filter((x) => x >= VaR); const cvar = tail.reduce((a, b) => a + b, 0) / tail.length;
+      return [[`VaR ${fmt(c * 100, 0)}%`, money(VaR), 'big'], ['CVaR (perda média além do VaR)', money(cvar)], ['Perda média', money(xs.reduce((a, b) => a + b, 0) / xs.length)], ['Amostras', String(xs.length)]];
     },
   },
   rula: {

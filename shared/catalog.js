@@ -2,7 +2,7 @@
 
 export const IMPROVEMENT_AREAS = [
   {
-    id: 'produtividade', label: 'Produtividade e fluxo da linha', color: '#2F6FED',
+    id: 'produtividade', label: 'Produtividade e fluxo da linha', color: '#7A899B',
     types: [
       'Redução de Takt Time',
       'Ganho de DL (mão de obra direta)',
@@ -12,15 +12,15 @@ export const IMPROVEMENT_AREAS = [
     ],
   },
   {
-    id: 'custo', label: 'Custo e sustentabilidade', color: '#1F9D74',
+    id: 'custo', label: 'Custo e sustentabilidade', color: '#6B7A66',
     types: ['Green Gear & ESG', 'Redução de custos (até R$ 120 mil)'],
   },
   {
-    id: 'qualidade', label: 'Qualidade, produto e equipamento', color: '#8A5CF5',
+    id: 'qualidade', label: 'Qualidade, produto e equipamento', color: '#937359',
     types: ['Qualidade / Zero Defeitos', 'Melhoria de Produto', 'Manutenção Autônoma (AM)'],
   },
   {
-    id: 'pessoas', label: 'Pessoas e segurança', color: '#E07A1F',
+    id: 'pessoas', label: 'Pessoas e segurança', color: '#7D6363',
     types: [
       'Segurança / Zero Acidentes',
       'Ergonomia & Saúde Ocupacional',

@@ -1,6 +1,6 @@
 // Apresentação executiva (17 slides do PSF) + histórico dos indicadores + dossiê técnico.
 // Cada slide é desenhado num quadro fixo de 1600×900 e escalado para caber na tela.
-import { useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react';
 import { STAGE, EXEC_SLIDES, ANNEXES, PHASES, GATE_STATUS, MATURITY, annexOf, phaseOf } from '../../shared/psf.js';
 import { CATALOG } from '../../shared/tools.js';
 import { projectStatus, toolFilled, fieldFilled } from '../../shared/progress.js';
@@ -9,6 +9,12 @@ import { Avatar, Logo } from '../components/ui.jsx';
 import { fmt, money, num, months, irrPct } from '../kinds/kit.jsx';
 
 export const W = 1600, H = 900;
+
+// Navegação dentro da apresentação (roteiro, régua de fases e evidências levam ao slide certo).
+// Só existe no palco e no modo apresentação; miniaturas e exportações ficam estáticas.
+export const DeckNav = createContext(null);
+const useNav = () => useContext(DeckNav);
+const tap = (fn) => (ev) => { ev.stopPropagation(); fn(); };
 
 // Escala o quadro de 1600×900 para a largura disponível.
 export function SlideCanvas({ children }) {
@@ -25,24 +31,32 @@ export function SlideCanvas({ children }) {
 }
 
 // Reduz o conteúdo até caber na área disponível (sem cortar).
-export function FitBox({ children, className = '' }) {
+export function FitBox({ children, className = '', grow = 1, center = false }) {
   const outer = useRef(), inner = useRef();
   const [k, setK] = useState(1);
   useLayoutEffect(() => {
     const o = outer.current, i = inner.current; if (!o || !i) return;
+    // Encolhe quando o conteúdo não cabe (mínimo 45%) e amplia quando sobra espaço (até `grow`).
     const fit = () => {
       i.style.transform = 'none'; i.style.width = '100%';
-      const h = i.scrollHeight, avail = o.clientHeight;
-      let z = h > avail && avail > 0 ? Math.max(0.45, avail / h) : 1;
-      if (z < 1) { i.style.width = `${100 / z}%`; z = Math.max(0.45, avail / i.scrollHeight); i.style.width = `${100 / z}%`; }
-      i.style.transform = z < 1 ? `scale(${z})` : 'none';
+      const avail = o.clientHeight; if (!avail) return;
+      const at = (z) => { i.style.width = `${100 / z}%`; return i.scrollHeight * z; };
+      let z = Math.min(grow, Math.max(0.45, avail / i.scrollHeight));
+      // Gráficos mudam de altura com a largura: repete até estabilizar e garante que tudo cabe.
+      for (let n = 0; n < 6; n++) { const nz = Math.min(grow, Math.max(0.45, avail / (at(z) / z))); if (Math.abs(nz - z) < 0.004) { z = nz; break; } z = nz; }
+      // Também não pode vazar para os lados (tabelas largas).
+      while (z > 0.45 && (at(z) > avail + 1 || i.scrollWidth > i.clientWidth + 1)) z = Math.max(0.45, z * 0.96);
+      if (Math.abs(z - 1) <= 0.004) { z = 1; i.style.width = '100%'; }
+      i.style.transform = z !== 1 ? `scale(${z})` : 'none';
+      const left = avail - i.scrollHeight * z;
+      i.style.top = center && left > 24 ? `${Math.round(left / 2)}px` : '0';
       setK(z);
     };
     fit();
     const ro = new ResizeObserver(fit); ro.observe(o);
-    const t = setTimeout(fit, 120);
-    return () => { ro.disconnect(); clearTimeout(t); };
-  }, [children]);
+    const t = setTimeout(fit, 120), t2 = setTimeout(fit, 600);
+    return () => { ro.disconnect(); clearTimeout(t); clearTimeout(t2); };
+  }, [children, grow]);
   return <div ref={outer} className={`fit ${className}`}><div ref={inner} className="fit-inner" style={{ transformOrigin: 'top left' }} data-k={k}>{children}</div></div>;
 }
 
@@ -119,7 +133,7 @@ function ProsCons({ data }) {
   const ranking = m.wm ? [...m.wm.rows].sort((a, b) => b.score - a.score) : [];
   const top = ranking.length ? Math.max(...ranking.map((r) => r.score || 0), 1) : 1;
   return (
-    <div className="sl-stack">
+    <FitBox grow={1.3}><div className="sl-stack pc-stack">
       <div className="sl-pc">
         <div className="pro"><span>Prós</span><ul>{m.pros.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
         <div className="con"><span>Contras</span><ul>{m.cons.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
@@ -131,7 +145,7 @@ function ProsCons({ data }) {
           <div className="sl-col"><Box k="Restrições consideradas" v={m.restr} /><Box k="Justificativa" v={F(data, 's09').justificativa} /></div>
         </div>
       )}
-    </div>
+    </div></FitBox>
   );
 }
 
@@ -182,9 +196,10 @@ function Results({ data }) {
 // ---------- peças ----------
 const Kicker = ({ children }) => <div className="sl-kicker">{children}</div>;
 // Régua das 5 fases do PSF no topo de cada slide.
-const PhaseRail = ({ phase, dark }) => (
-  <div className={`sl-rail ${dark ? 'dark' : ''}`}>{PHASES.map((p) => <span key={p.n} className={p.n === phase ? 'on' : p.n < phase ? 'past' : ''}><i>{p.n}</i>{p.title}</span>)}</div>
-);
+function PhaseRail({ phase, dark }) {
+  const nav = useNav();
+  return <div className={`sl-rail ${dark ? 'dark' : ''}`}>{PHASES.map((p) => <span key={p.n} className={`${p.n === phase ? 'on' : p.n < phase ? 'past' : ''} ${nav ? 'link' : ''}`} title={nav ? `Ir para a fase ${p.n}` : undefined} onClick={nav ? tap(() => nav.toPhase(p.n)) : undefined}><i>{p.n}</i>{p.title}</span>)}</div>;
+}
 function Frame({ project, n, total, kicker, title, q, children, dark, tag, phase, num: big }) {
   return (
     <div className={`sl ${dark ? 'dark' : ''}`}>
@@ -195,15 +210,17 @@ function Frame({ project, n, total, kicker, title, q, children, dark, tag, phase
       {title && <h2 className="sl-title">{title}</h2>}
       {q && <div className="sl-q">{q}{tag && <span className="sl-tag">{tag}</span>}</div>}
       <div className="sl-body">{children}</div>
-      <div className="sl-foot"><span>{project.title}</span><span className="sl-foot-mid">IGNIS · Project Solution Framework</span><span className="sl-page">{n} <i>/ {total}</i></span></div>
+      <div className="sl-foot"><span>{project.title}</span><span className="sl-foot-mid">IGNIS · Project Solution Framework</span><span className="sl-page">{n > 0 ? n : '–'} <i>/ {total}</i></span></div>
     </div>
   );
 }
 const Box = ({ k, v, big, tone }) => (fieldFilled(v) ? <div className={`sl-box ${big ? 'big' : ''} ${tone || ''}`}>{k && <span>{k}</span>}<p>{Array.isArray(v) ? v.join(' · ') : v}</p></div> : null);
 const Evidence = ({ t }) => {
+  const nav = useNav();
   if (!t) return null;
   const def = CATALOG[t.tool]; const K = KINDS[def.kind];
-  return <div className="sl-evid"><div className="sl-evid-head"><span className="sl-evid-name">{def.name}</span><span className="sl-evid-ref">Evidência principal · detalhe no dossiê</span></div><FitBox><div className="tv sl-tv"><K.View d={t.data} cfg={def.cfg} def={def} /></div></FitBox></div>;
+  const can = nav?.hasAnnex(t.id);
+  return <div className="sl-evid"><div className="sl-evid-head"><span className="sl-evid-name">{def.name}</span>{can ? <button type="button" className="sl-evid-ref link" onClick={tap(() => nav.toAnnex(t.id))}>Ver detalhe no dossiê →</button> : <span className="sl-evid-ref">Evidência principal · detalhe no dossiê</span>}</div><FitBox grow={1.5}><div className="tv sl-tv"><K.View d={t.data} cfg={def.cfg} def={def} /></div></FitBox></div>;
 };
 const Imgs = ({ images, max = 3 }) => (images || []).length ? <div className="sl-imgs">{images.slice(0, max).map((i) => <img key={i.id} src={i.src} alt="" />)}</div> : null;
 
@@ -221,13 +238,13 @@ function Generic({ data, sid, also = [] }) {
   const alsoBoxes = also.flatMap((s) => STAGE[s].fields.filter((x) => STAGE[s].key.includes(x.k) && fieldFilled(F(data, s)[x.k])).map((x) => [x.l, F(data, s)[x.k]]));
   return (
     <div className={`sl-grid ${ev ? '' : 'solo'}`}>
-      <div className="sl-col">
+      <div className="sl-col"><FitBox grow={ev ? 1.2 : 1.6}><div className="sl-col-in">
         {hk && fieldFilled(f[hk]) && <div className="sl-head">{f[hk]}</div>}
         {short.length > 0 && <div className="sl-facts">{short.map((x) => <div key={x.k}><span>{x.l}</span><b>{Array.isArray(f[x.k]) ? f[x.k].join(', ') : x.t === 'date' ? new Date(`${f[x.k]}T12:00`).toLocaleDateString('pt-BR') : f[x.k]}</b></div>)}</div>}
         {long.map((x) => <Box key={x.k} k={x.l} v={f[x.k]} />)}
         {alsoBoxes.map(([k, v]) => <Box key={k} k={k} v={v} />)}
         {!ev && <Imgs images={imgs} />}
-      </div>
+      </div></FitBox></div>
       {ev && <div className="sl-col right">{imgs.length > 0 && !CATALOG[ev.tool]?.interactive ? <Imgs images={imgs} /> : null}<Evidence t={ev} /></div>}
     </div>
   );
@@ -258,6 +275,7 @@ function S1({ project, data }) {
 // Roteiro: as fases do PSF, os slides de cada uma e a situação dos Gates.
 function Agenda({ slides, data }) {
   const ps = projectStatus(data);
+  const nav = useNav();
   return (
     <div className="sl-agenda">
       {PHASES.map((p) => {
@@ -266,7 +284,7 @@ function Agenda({ slides, data }) {
         return (
           <div key={p.n} className={`sl-ag g-${g?.gateStatus}`}>
             <div className="sl-ag-head"><b>{p.n}</b><div><strong>{p.title}</strong><em>{GATE_STATUS[g?.gateStatus]?.label || 'Pendente'}</em></div></div>
-            <ul>{items.length ? items.map((x) => <li key={x.id}><span>{x.e.code || String(x.e.n).padStart(2, '0')}</span>{x.e.title}</li>) : <li className="none">Sem conteúdo ainda</li>}</ul>
+            <ul>{items.length ? items.map((x) => <li key={x.id} className={nav ? 'link' : ''} onClick={nav ? tap(() => nav.toId(x.id)) : undefined} title={nav ? 'Ir para este slide' : undefined}><span>{x.e.code || String(x.e.n).padStart(2, '0')}</span><div><b>{x.e.title}</b><small>{x.e.q}</small></div></li>) : <li className="none">Sem conteúdo ainda</li>}</ul>
             <p className="sl-ag-gate"><b>{p.gate.title.split(' · ')[0]}</b>{p.gate.approves}</p>
           </div>
         );
@@ -342,13 +360,18 @@ function S13({ data }) {
 
 function S17({ data }) {
   const f = F(data, 's17');
+  const fin = financeOf(data);
   const ps = projectStatus(data);
   return (
     <div className="sl-stack">
       <div className="sl-ask big"><span>Solicitação</span><p>{f.pedido || 'Descreva na etapa 17 o pedido específico de aprovação.'}</p></div>
       <div className="sl-facts row4">{[['Investimento', num(f.investimento) != null ? money(num(f.investimento)) : null], ['Prazo', f.prazo], ['Responsável', f.responsavel], ['Primeira atividade', f.primeira], ['Início', f.inicio && new Date(`${f.inicio}T12:00`).toLocaleDateString('pt-BR')], ['Próximo marco', f.proximoMarco]].filter(([, v]) => fieldFilled(v)).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}</div>
       <div className="sl-grid">
-        <div className="sl-col"><Box k="Recursos solicitados" v={f.recursos} /><Box k="Condições de avanço" v={f.condicoes} />{fieldFilled(f.aprovacoes) && <div className="sl-chips">{f.aprovacoes.map((a) => <span key={a}>{a}</span>)}</div>}</div>
+        <div className="sl-col">
+          {fin && <div className="sl-deliver"><span>O que esta decisão entrega</span><div><div><b>{money(fin.anual)}</b><em>economia líquida por ano</em></div><div><b>{months(fin.payback)}</b><em>para se pagar</em></div><div><b>{money(fin.npv)}</b><em>VPL em {fin.N} meses</em></div></div></div>}
+          <Box k="Recursos solicitados" v={f.recursos} /><Box k="Condições de avanço" v={f.condicoes} />
+          {fieldFilled(f.aprovacoes) && <div className="sl-chips"><em>Aprovações necessárias</em>{f.aprovacoes.map((a) => <span key={a}>{a}</span>)}</div>}
+        </div>
         <div className="sl-col right"><div className="sl-gates">{ps.phases.map((p) => <div key={p.n} className={`g-${p.gateStatus}`}><b>G{p.n}</b><span>{p.gate.title.split('· ')[1]}</span><em>{GATE_STATUS[p.gateStatus]?.label}</em></div>)}</div>{featured(data, 's17') && <Evidence t={featured(data, 's17')} />}</div>
       </div>
     </div>
@@ -375,7 +398,7 @@ export function Slide({ slide, project, index, total, opts = {} }) {
     const m = kpiModel(slide.t.data, range);
     return (
       <Frame project={project} n={index + 1} total={total} phase={phaseOf(slide.sid).n} kicker={`Indicador EMS · etapa ${STAGE[slide.sid].n} · ${STAGE[slide.sid].short}`} title={`${m.k.id === 'OUTRO' ? slide.t.data.nome || 'Indicador' : m.k.id} · histórico do período`} q={m.k.name}>
-        <FitBox><div className="tv sl-tv"><KINDS.kpi.View d={slide.t.data} cfg={def.cfg} opts={{ range }} /></div></FitBox>
+        <FitBox grow={1.3} center><div className="tv sl-tv"><KINDS.kpi.View d={slide.t.data} cfg={def.cfg} opts={{ range, slide: true }} /></div></FitBox>
       </Frame>
     );
   }
@@ -393,7 +416,7 @@ export function Slide({ slide, project, index, total, opts = {} }) {
   const def = CATALOG[slide.t.tool]; const K = KINDS[def.kind];
   return (
     <Frame project={project} n={index + 1} total={total} phase={phaseOf(slide.sid).n} num={slide.code} kicker={`Dossiê técnico · ${slide.a.title}`} title={def.name} q={`Etapa ${STAGE[slide.sid].n} · ${STAGE[slide.sid].title}`}>
-      <FitBox><div className="tv sl-tv"><K.View d={slide.t.data} cfg={def.cfg} def={def} /></div></FitBox>
+      <FitBox grow={1.4} center><div className="tv sl-tv"><K.View d={slide.t.data} cfg={def.cfg} def={def} /></div></FitBox>
     </Frame>
   );
 }
